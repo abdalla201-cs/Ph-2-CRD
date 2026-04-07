@@ -425,6 +425,65 @@
             return addr;
         }
 
+        // --- 🛡️ دالة الفلتر الذكي للأسماء (قاموس ضخم للملاحظات) ---
+        function isValidContactName(name) {
+            const lowerName = name.toLowerCase().trim();
+            
+            const invalidWords = [
+                'repeat', 'no work', 'wrong', 'do not call', 'dnc', 'not interested',
+                'voicemail', 'disconnected', 'busy', 'no answer', 'left message', 'spoke',
+                'callback', 'call back', 'texted', 'dead', 'sold', 'spanish', 'language',
+                'invalid', 'status', 'update', 'said', 'told', 'interested', 'machine', 
+                'mailbox', 'message', 'none', 'n/a', 'na', 'not in service', 'no longer',
+                'business', 'out of service', 'does not work', 'stop', 'quit', 'opt out',
+                'remove', 'hang up', 'hung up', 'bad number', 'wrong number', 'not working',
+                'no english', 'english', 'not', 'dont', 'doesnt', 'work', 'worked', 'working',
+                'number', 'phone', 'contact', 'call', 'caller', 'cancel', 'cancelled',
+                'delete', 'deleted', 'unknown', 'fake', 'bogus', 'scam', 'spam', 'spamming',
+                'scammer', 'fraud', 'fraudulent', 'hello', 'owner', 'manager', 'tenant',
+                'landlord', 'resident', 'husband', 'wife', 'son', 'daughter', 'father',
+                'mother', 'brother', 'sister', 'uncle', 'aunt', 'cousin', 'nephew', 'niece',
+                'grandfather', 'grandmother', 'grandson', 'granddaughter', 'family', 'friend',
+                'neighbor', 'associate', 'relative', 'relatives', 'neighbors', 'associates',
+                'info', 'information', 'details', 'detail', 'data', 'record', 'records',
+                'file', 'files', 'account', 'accounts', 'profile', 'profiles', 'report',
+                'reports', 'document', 'documents', 'vm', 'lm', 'cb', 'ni', 'wn', 'bad',
+                'good', 'yes', 'no', 'true', 'false', 'same', 'diff', 'different', 'new',
+                'old', 'current', 'previous', 'historic', 'voice', 'line', 'cell', 'mobile',
+                'landline', 'wireless', 'telephone', 'tel', 'fax', 'email', 'address', 'addr',
+                'location', 'place', 'property', 'properties', 'home', 'house', 'apartment',
+                'apt', 'suite', 'ste', 'unit', 'room', 'rm', 'building', 'bldg', 'floor',
+                'fl', 'level', 'lvl', 'street', 'st', 'avenue', 'ave', 'boulevard', 'blvd',
+                'drive', 'dr', 'road', 'rd', 'lane', 'ln', 'way', 'court', 'ct', 'terrace',
+                'ter', 'parkway', 'pkwy', 'highway', 'hwy', 'circle', 'cir', 'loop', 'trail',
+                'trl', 'row', 'square', 'sq', 'broadway', 'crossing', 'xing', 'alley',
+                'left vm', 'lm on', 'did not answer', 'hanged up', 'not int', 'no int',
+                'take me off', 'remove me', 'wrong num', 'wrong person', 'wrong contact',
+                'bad num', 'mailbox full', 'vm full', 'voicemail full', 'not setup',
+                'not set up', 'busy signal', 'fast busy', 'fax machine', 'modem', 'screeching',
+                'dead air', 'silence', 'dropped', 'dropped call', 'call dropped', 'call later',
+                'try again', 'try later', 'call tomorrow', 'appointment', 'appt', 'schedule',
+                'scheduled', 'meeting', 'follow up', 'lead', 'prospect', 'opportunity',
+                'deal', 'client', 'customer', 'patient', 'buyer', 'seller', 'renter',
+                'leaser', 'lessee', 'lessor', 'broker', 'agent', 'realtor', 'real estate',
+                'realty', 'property management', 'pm', 'llc', 'inc', 'corp', 'corporation',
+                'company', 'co', 'ltd', 'limited', 'group', 'grp', 'partners', 'enterprises',
+                'ent', 'holdings', 'investments', 'inv', 'trust', 'fund', 'estate of',
+                'heirs of', 'care of', 'attn', 'attention'
+            ];
+            
+            for (let word of invalidWords) {
+                const regex = new RegExp('\\b' + word + '\\b', 'i');
+                if (regex.test(lowerName)) return false;
+            }
+            
+            const wordsCount = lowerName.split(/\s+/).length;
+            if (wordsCount > 4) return false;
+            if (wordsCount === 1 && lowerName.length < 3) return false;
+
+            return true;
+        }
+
         function groupNumbersByNames(text) {
             const lines = text.split('\n');
             const newContacts = [];
@@ -446,7 +505,7 @@
                 const addr = extractAddressFromLine(line);
                 const numbers = extractPhoneNumbers(line);
 
-                // --- 🛡️ اكتشاف أرقام الملاحظات لمنعها (DNC) ---
+                // اكتشاف أرقام الملاحظات لمنعها (DNC)
                 if (numbers.length > 0) {
                     let textToAnalyze = line;
                     if (addr) textToAnalyze = textToAnalyze.replace(addr, '');
@@ -460,19 +519,34 @@
                     }
                 }
 
+                // التحقق من الاسم باستخدام الفلتر الذكي
                 if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3 && !line.includes('@')) {
-                    if (currentContact) {
-                        newContacts.push(currentContact);
+                    const potentialName = nameMatch[1].trim();
+                    
+                    if (isValidContactName(potentialName)) {
+                        if (currentContact) {
+                            newContacts.push(currentContact);
+                        }
+                        currentContact = {
+                            name: potentialName,
+                            numbers: [...orphanNumbers],
+                            emails: [...orphanEmails],
+                            addresses: [...orphanAddresses]
+                        };
+                        orphanNumbers = [];
+                        orphanEmails = [];
+                        orphanAddresses = [];
+                    } else {
+                        if (currentContact) {
+                            currentContact.emails.push(...emails);
+                            if (addr && !currentContact.addresses.includes(addr)) currentContact.addresses.push(addr);
+                            numbers.forEach(n => { if (!currentContact.numbers.includes(n)) currentContact.numbers.push(n); });
+                        } else {
+                            orphanEmails.push(...emails);
+                            if (addr && !orphanAddresses.includes(addr)) orphanAddresses.push(addr);
+                            numbers.forEach(n => { if (!orphanNumbers.includes(n)) orphanNumbers.push(n); });
+                        }
                     }
-                    currentContact = {
-                        name: nameMatch[1].trim(),
-                        numbers: [...orphanNumbers],
-                        emails: [...orphanEmails],
-                        addresses: [...orphanAddresses]
-                    };
-                    orphanNumbers = [];
-                    orphanEmails = [];
-                    orphanAddresses = [];
                 } else {
                     if (currentContact) {
                         currentContact.emails.push(...emails);
@@ -505,7 +579,6 @@
                 });
             }
 
-            // --- 🧹 تنظيف الأرقام من القوائم النهائية ---
             newContacts.forEach(c => {
                 c.numbers = c.numbers.filter(n => !globalDncNumbers.has(n));
             });
@@ -521,10 +594,29 @@
 
             let firstName = null;
 
-            for (const line of lines) { const m = line.match(prefixedNamePattern); if (m) { firstName = m[1].trim(); break; } }
-            if (!firstName) { for (const line of lines) { if (standaloneNamePattern.test(line) && !line.match(/\d/) && line.length > 3) { firstName = line.match(standaloneNamePattern)[1].trim(); break; } } }
-            if (!firstName) { for (const line of lines) { if (line.match(/\d/) || /SSN|DOB|LexID|Gender|View|Setup|Report|Locator|Confidence|Carrier|Feedback|Landline|Wireless|Address|Phone|Subject|Information|Next|Steps|Relatives|Neighbors|Associates/i.test(line)) continue; const m = line.match(allCapsNamePattern); if (m) { firstName = m[1].trim(); break; } } }
-            if (!firstName) { const m = text.match(/\b([A-Z]{2,}(?:\s+[A-Z]{1,2}\b)?(?:\s+[A-Z]{2,})+)/); if (m) firstName = m[1].trim(); }
+            for (const line of lines) { 
+                const m = line.match(prefixedNamePattern); 
+                if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } 
+            }
+            if (!firstName) { 
+                for (const line of lines) { 
+                    if (standaloneNamePattern.test(line) && !line.match(/\d/) && line.length > 3) {
+                        const m = line.match(standaloneNamePattern);
+                        if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } 
+                    } 
+                } 
+            }
+            if (!firstName) { 
+                for (const line of lines) { 
+                    if (line.match(/\d/) || /SSN|DOB|LexID|Gender|View|Setup|Report|Locator|Confidence|Carrier|Feedback|Landline|Wireless|Address|Phone|Subject|Information|Next|Steps|Relatives|Neighbors|Associates/i.test(line)) continue; 
+                    const m = line.match(allCapsNamePattern); 
+                    if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } 
+                } 
+            }
+            if (!firstName) { 
+                const m = text.match(/\b([A-Z]{2,}(?:\s+[A-Z]{1,2}\b)?(?:\s+[A-Z]{2,})+)/); 
+                if (m && isValidContactName(m[1])) firstName = m[1].trim(); 
+            }
 
             const allEmails = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
             const allAddresses = text.split('\n').map(l => extractAddressFromLine(l.trim())).filter(Boolean);
@@ -899,6 +991,7 @@
                             colorCode = '#ff3b30'; 
                         }
                         
+                        // ✅ تم إزالة Bold من هنا بشكل نهائي
                         cleanHtml += `<div><span style="color:${colorCode};">${formatted}</span></div>`;
                         plainText += formatted + '\n';
                     });
