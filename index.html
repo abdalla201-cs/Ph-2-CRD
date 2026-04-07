@@ -132,16 +132,6 @@
         }
         .btn-secondary:hover { background-color: #333333; border-color: #555; }
 
-        .btn-whatsapp {
-            background-color: #10b981;
-            color: #fff;
-            padding: 12px 15px;
-            width: 100%;
-            margin-bottom: 10px;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
-        }
-        .btn-whatsapp:hover { background-color: #059669; transform: translateY(-2px); }
-
         .copy-btn {
             background-color: #333333;
             color: var(--text-main);
@@ -351,7 +341,6 @@
 
     <script>
         // --- 🛡️ SECURITY PROTECTIONS (Domain Lock & Anti-Inspect) ---
-        // ⚠️ تم وضع رابط حسابك الحقيقي هنا لفتح القفل
         const allowedDomains = ["abdalla201-cs.github.io", "localhost", "127.0.0.1", ""];
         
         if (!allowedDomains.includes(window.location.hostname) && window.location.hostname !== "") {
@@ -547,7 +536,6 @@
                     if (result === 'yes') {
                         colorStyle = 'style="color: #4ade80 !important;"'; 
                     } else if (result === 'no') {
-                        // أحمر iOS القياسي (مريح للوضع الليلي ولن يغيره إيفرنوت)
                         colorStyle = 'style="color: #ff3b30 !important;"'; 
                     } else {
                         colorStyle = 'style="color: #ffffff !important;"'; 
@@ -732,11 +720,11 @@
                         if (result === 'yes') {
                             colorCode = '#4ade80'; 
                         } else if (result === 'no') {
-                            // أحمر iOS القياسي
+                            // أحمر iOS الصريح
                             colorCode = '#ff3b30'; 
                         }
                         
-                        // إزالة الخط العريض (bold) تماماً وإزالة التغليف المزدوج
+                        // إزالة أي خط عريض (Bold) للأرقام
                         cleanHtml += `<div><span style="color:${colorCode};">${formatted}</span></div>`;
                         plainText += formatted + '\n';
                     });
