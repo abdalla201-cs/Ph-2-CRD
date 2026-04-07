@@ -429,6 +429,11 @@
             const lines = text.split('\n');
             const newContacts = [];
             let currentContact = null;
+            
+            let orphanNumbers = [];
+            let orphanEmails = [];
+            let orphanAddresses = [];
+            let globalDncNumbers = new Set(); 
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -436,47 +441,218 @@
 
                 const cleanedLine = line.replace(/\s+\d{1,3}\s*$/, '').trim();
                 const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i);
-                if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3) {
+                
+                const emails = extractEmails(line);
+                const addr = extractAddressFromLine(line);
+                const numbers = extractPhoneNumbers(line);
+
+                // --- 🛡️ اكتشاف أرقام الملاحظات لمنعها (DNC) ---
+                if (numbers.length > 0) {
+                    let textToAnalyze = line;
+                    if (addr) textToAnalyze = textToAnalyze.replace(addr, '');
+                    textToAnalyze = textToAnalyze.replace(/(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, '');
+                    textToAnalyze = textToAnalyze.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '');
+                    textToAnalyze = textToAnalyze.replace(/\b(phone|number|cell|mobile|home|work|primary|secondary|direct|office|contact|fax|landline|wireless|tel|telephone|or)\b/gi, '');
+                    
+                    const pureWords = textToAnalyze.match(/[a-zA-Z]{3,}/g) || [];
+                    if (pureWords.length > 4) {
+                        numbers.forEach(n => globalDncNumbers.add(n));
+                    }
+                }
+
+                if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3 && !line.includes('@')) {
                     if (currentContact) {
                         newContacts.push(currentContact);
                     }
                     currentContact = {
                         name: nameMatch[1].trim(),
-                        numbers: [],
-                        emails: [],
-                        addresses: []
+                        numbers: [...orphanNumbers],
+                        emails: [...orphanEmails],
+                        addresses: [...orphanAddresses]
                     };
-                } else if (currentContact) {
-                    const emails = extractEmails(line);
-                    currentContact.emails.push(...emails);
-                    const addr = extractAddressFromLine(line);
-                    if (addr && !currentContact.addresses.includes(addr)) {
-                        currentContact.addresses.push(addr);
+                    orphanNumbers = [];
+                    orphanEmails = [];
+                    orphanAddresses = [];
+                } else {
+                    if (currentContact) {
+                        currentContact.emails.push(...emails);
+                        if (addr && !currentContact.addresses.includes(addr)) {
+                            currentContact.addresses.push(addr);
+                        }
+                        numbers.forEach(n => {
+                            if (!currentContact.numbers.includes(n)) currentContact.numbers.push(n);
+                        });
+                    } else {
+                        orphanEmails.push(...emails);
+                        if (addr && !orphanAddresses.includes(addr)) {
+                            orphanAddresses.push(addr);
+                        }
+                        numbers.forEach(n => {
+                            if (!orphanNumbers.includes(n)) orphanNumbers.push(n);
+                        });
                     }
-                    const numbers = extractPhoneNumbers(line);
-                    numbers.forEach(n => {
-                        if (!currentContact.numbers.includes(n)) currentContact.numbers.push(n);
-                    });
                 }
             }
 
             if (currentContact) {
                 newContacts.push(currentContact);
+            } else if (orphanNumbers.length > 0 || orphanEmails.length > 0 || orphanAddresses.length > 0) {
+                newContacts.push({
+                    name: "EXTRACTED DATA",
+                    numbers: orphanNumbers,
+                    emails: orphanEmails,
+                    addresses: orphanAddresses
+                });
             }
 
-            if (newContacts.length === 0 && text.trim()) {
-                const allNumbers = extractPhoneNumbers(text);
-                if (allNumbers.length > 0) {
-                    newContacts.push({
-                        name: "EXTRACTED DATA",
-                        numbers: allNumbers,
-                        emails: [],
-                        addresses: []
-                    });
+            // --- 🧹 تنظيف الأرقام من القوائم النهائية ---
+            newContacts.forEach(c => {
+                c.numbers = c.numbers.filter(n => !globalDncNumbers.has(n));
+            });
+
+            return newContacts.filter(c => c.numbers.length > 0 || c.emails.length > 0 || c.addresses.length > 0);
+        }
+
+        function groupNumbersByNamesFromImage(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i;
+            const prefixedNamePattern = /(?:Relatives|Neighbors|Associates)\s+For:\s+([A-Z][A-Z\s]+[A-Z])/i;
+            const allCapsNamePattern = /^([A-Z]{2,}(?:\s+[A-Z]{1,2}(?:\s+[A-Z]{2,})+))$/;
+
+            let firstName = null;
+
+            for (const line of lines) { const m = line.match(prefixedNamePattern); if (m) { firstName = m[1].trim(); break; } }
+            if (!firstName) { for (const line of lines) { if (standaloneNamePattern.test(line) && !line.match(/\d/) && line.length > 3) { firstName = line.match(standaloneNamePattern)[1].trim(); break; } } }
+            if (!firstName) { for (const line of lines) { if (line.match(/\d/) || /SSN|DOB|LexID|Gender|View|Setup|Report|Locator|Confidence|Carrier|Feedback|Landline|Wireless|Address|Phone|Subject|Information|Next|Steps|Relatives|Neighbors|Associates/i.test(line)) continue; const m = line.match(allCapsNamePattern); if (m) { firstName = m[1].trim(); break; } } }
+            if (!firstName) { const m = text.match(/\b([A-Z]{2,}(?:\s+[A-Z]{1,2}\b)?(?:\s+[A-Z]{2,})+)/); if (m) firstName = m[1].trim(); }
+
+            const allEmails = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
+            const allAddresses = text.split('\n').map(l => extractAddressFromLine(l.trim())).filter(Boolean);
+
+            let globalDncNumbers = new Set();
+            lines.forEach(line => {
+                const numbers = extractPhoneNumbers(line);
+                if (numbers.length > 0) {
+                    let textToAnalyze = line;
+                    const addr = extractAddressFromLine(line);
+                    if (addr) textToAnalyze = textToAnalyze.replace(addr, '');
+                    textToAnalyze = textToAnalyze.replace(/(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, '');
+                    textToAnalyze = textToAnalyze.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '');
+                    textToAnalyze = textToAnalyze.replace(/\b(phone|number|cell|mobile|home|work|primary|secondary|direct|office|contact|fax|landline|wireless|tel|telephone|or)\b/gi, '');
+                    
+                    const pureWords = textToAnalyze.match(/[a-zA-Z]{3,}/g) || [];
+                    if (pureWords.length > 4) {
+                        numbers.forEach(n => globalDncNumbers.add(n));
+                    }
                 }
-            }
+            });
 
-            return newContacts;
+            const allPhones = extractPhoneNumbers(text).filter(n => !globalDncNumbers.has(n));
+
+            if (allPhones.length === 0 && allEmails.length === 0) return [];
+
+            return [{
+                name: firstName || 'EXTRACTED DATA',
+                numbers: [...new Set(allPhones)],
+                emails: [...new Set(allEmails)],
+                addresses: [...new Set(allAddresses)]
+            }];
+        }
+
+        const lookupFileInput = document.getElementById('lookupFileInput');
+        const lookupUploadArea = document.getElementById('lookupUploadArea');
+
+        lookupUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); lookupUploadArea.classList.add('dragover'); });
+        lookupUploadArea.addEventListener('dragleave', () => { lookupUploadArea.classList.remove('dragover'); });
+        lookupUploadArea.addEventListener('drop', (e) => { 
+            e.preventDefault(); 
+            lookupUploadArea.classList.remove('dragover'); 
+            const files = Array.from(e.dataTransfer.files); 
+            if (files.length > 0) handleLookupFile(files[0]); 
+        });
+
+        lookupFileInput.addEventListener('change', (e) => { 
+            const files = Array.from(e.target.files); 
+            if (files.length > 0) handleLookupFile(files[0]); 
+        });
+
+        function handleLookupFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true, raw: true });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    if (json.length < 2) return showNotification('Lookup file is empty.', 'error');
+
+                    const headers = json[0].map(h => String(h).trim());
+                    
+                    let phoneIndex = -1;
+                    let existIndex = -1;
+
+                    headers.forEach((h, i) => {
+                        const cleanHeader = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        if (['phonenumber', 'phone', 'number', 'whatsappnumber', 'wanumber'].includes(cleanHeader)) {
+                            phoneIndex = i;
+                        }
+                        if (['exist', 'whatsapp', 'status', 'iswhatsapp', 'haswhatsapp', 'result'].includes(cleanHeader)) {
+                            existIndex = i;
+                        }
+                    });
+
+                    if (phoneIndex === -1 || existIndex === -1) {
+                        return showNotification('لم أتمكن من العثور على أعمدة تحتوي على الأرقام وحالة الواتساب.', 'error');
+                    }
+
+                    const dataRows = json.slice(1);
+                    const processedData = dataRows.map(row => ({ 
+                        phoneNumber: row[phoneIndex], 
+                        exist: row[existIndex] 
+                    }));
+
+                    processLookupData(processedData);
+                } catch (error) {
+                    showNotification('Failed to process lookup file.', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processLookupData(data) {
+            let loadedCount = 0;
+            lookupResultsMap.clear();
+
+            data.forEach(row => {
+                if (row.phoneNumber !== undefined && row.exist !== undefined) {
+                    let cleanedNumber = String(row.phoneNumber).replace(/[^\d]/g, '');
+                    if (cleanedNumber.length >= 10) {
+                        if (cleanedNumber.length > 10) cleanedNumber = cleanedNumber.slice(-10);
+                        
+                        const existStatus = String(row.exist).toLowerCase().trim();
+                        let finalStatus = null;
+                        
+                        if (['1', 'yes', 'true', 'valid', 'active', 'found'].includes(existStatus)) {
+                            finalStatus = 'yes';
+                        } else if (['0', 'no', 'false', 'invalid', 'inactive', 'notfound', 'not found'].includes(existStatus)) {
+                            finalStatus = 'no';
+                        }
+
+                        if (finalStatus === 'yes' || finalStatus === 'no') {
+                            lookupResultsMap.set(cleanedNumber, finalStatus);
+                            loadedCount++;
+                        }
+                    }
+                }
+            });
+
+            updateStats();
+            updateCleanedNumbers();
+
+            if (loadedCount > 0) showNotification(`Loaded ${loadedCount} lookup entries successfully!`, 'success');
+            else showNotification('No valid lookup entries found.', 'error');
         }
 
         function formatPhoneNumber(number) {
@@ -720,11 +896,9 @@
                         if (result === 'yes') {
                             colorCode = '#4ade80'; 
                         } else if (result === 'no') {
-                            // أحمر iOS الصريح
                             colorCode = '#ff3b30'; 
                         }
                         
-                        // إزالة أي خط عريض (Bold) للأرقام
                         cleanHtml += `<div><span style="color:${colorCode};">${formatted}</span></div>`;
                         plainText += formatted + '\n';
                     });
@@ -1134,129 +1308,6 @@
             } else {
                 processText();
             }
-        }
-
-        function groupNumbersByNamesFromImage(text) {
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-            const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i;
-            const prefixedNamePattern = /(?:Relatives|Neighbors|Associates)\s+For:\s+([A-Z][A-Z\s]+[A-Z])/i;
-            const allCapsNamePattern = /^([A-Z]{2,}(?:\s+[A-Z]{1,2}(?:\s+[A-Z]{2,})+))$/;
-
-            let firstName = null;
-
-            for (const line of lines) { const m = line.match(prefixedNamePattern); if (m) { firstName = m[1].trim(); break; } }
-            if (!firstName) { for (const line of lines) { if (standaloneNamePattern.test(line) && !line.match(/\d/) && line.length > 3) { firstName = line.match(standaloneNamePattern)[1].trim(); break; } } }
-            if (!firstName) { for (const line of lines) { if (line.match(/\d/) || /SSN|DOB|LexID|Gender|View|Setup|Report|Locator|Confidence|Carrier|Feedback|Landline|Wireless|Address|Phone|Subject|Information|Next|Steps|Relatives|Neighbors|Associates/i.test(line)) continue; const m = line.match(allCapsNamePattern); if (m) { firstName = m[1].trim(); break; } } }
-            if (!firstName) { const m = text.match(/\b([A-Z]{2,}(?:\s+[A-Z]{1,2}\b)?(?:\s+[A-Z]{2,})+)/); if (m) firstName = m[1].trim(); }
-
-            const allPhones = extractPhoneNumbers(text);
-            const allEmails = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
-            const allAddresses = text.split('\n').map(l => extractAddressFromLine(l.trim())).filter(Boolean);
-
-            if (allPhones.length === 0 && allEmails.length === 0) return [];
-
-            return [{
-                name: firstName || 'EXTRACTED DATA',
-                numbers: [...new Set(allPhones)],
-                emails: [...new Set(allEmails)],
-                addresses: [...new Set(allAddresses)]
-            }];
-        }
-
-        const lookupFileInput = document.getElementById('lookupFileInput');
-        const lookupUploadArea = document.getElementById('lookupUploadArea');
-
-        lookupUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); lookupUploadArea.classList.add('dragover'); });
-        lookupUploadArea.addEventListener('dragleave', () => { lookupUploadArea.classList.remove('dragover'); });
-        lookupUploadArea.addEventListener('drop', (e) => { 
-            e.preventDefault(); 
-            lookupUploadArea.classList.remove('dragover'); 
-            const files = Array.from(e.dataTransfer.files); 
-            if (files.length > 0) handleLookupFile(files[0]); 
-        });
-
-        lookupFileInput.addEventListener('change', (e) => { 
-            const files = Array.from(e.target.files); 
-            if (files.length > 0) handleLookupFile(files[0]); 
-        });
-
-        function handleLookupFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true, raw: true });
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
-                    if (json.length < 2) return showNotification('Lookup file is empty.', 'error');
-
-                    const headers = json[0].map(h => String(h).trim());
-                    
-                    let phoneIndex = -1;
-                    let existIndex = -1;
-
-                    headers.forEach((h, i) => {
-                        const cleanHeader = h.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        if (['phonenumber', 'phone', 'number', 'whatsappnumber', 'wanumber'].includes(cleanHeader)) {
-                            phoneIndex = i;
-                        }
-                        if (['exist', 'whatsapp', 'status', 'iswhatsapp', 'haswhatsapp', 'result'].includes(cleanHeader)) {
-                            existIndex = i;
-                        }
-                    });
-
-                    if (phoneIndex === -1 || existIndex === -1) {
-                        return showNotification('لم أتمكن من العثور على أعمدة تحتوي على الأرقام وحالة الواتساب.', 'error');
-                    }
-
-                    const dataRows = json.slice(1);
-                    const processedData = dataRows.map(row => ({ 
-                        phoneNumber: row[phoneIndex], 
-                        exist: row[existIndex] 
-                    }));
-
-                    processLookupData(processedData);
-                } catch (error) {
-                    showNotification('Failed to process lookup file.', 'error');
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function processLookupData(data) {
-            let loadedCount = 0;
-            lookupResultsMap.clear();
-
-            data.forEach(row => {
-                if (row.phoneNumber !== undefined && row.exist !== undefined) {
-                    let cleanedNumber = String(row.phoneNumber).replace(/[^\d]/g, '');
-                    if (cleanedNumber.length >= 10) {
-                        if (cleanedNumber.length > 10) cleanedNumber = cleanedNumber.slice(-10);
-                        
-                        const existStatus = String(row.exist).toLowerCase().trim();
-                        let finalStatus = null;
-                        
-                        if (['1', 'yes', 'true', 'valid', 'active', 'found'].includes(existStatus)) {
-                            finalStatus = 'yes';
-                        } else if (['0', 'no', 'false', 'invalid', 'inactive', 'notfound', 'not found'].includes(existStatus)) {
-                            finalStatus = 'no';
-                        }
-
-                        if (finalStatus === 'yes' || finalStatus === 'no') {
-                            lookupResultsMap.set(cleanedNumber, finalStatus);
-                            loadedCount++;
-                        }
-                    }
-                }
-            });
-
-            updateStats();
-            updateCleanedNumbers();
-
-            if (loadedCount > 0) showNotification(`Loaded ${loadedCount} lookup entries successfully!`, 'success');
-            else showNotification('No valid lookup entries found.', 'error');
         }
 
         // Initialize Settings
