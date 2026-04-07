@@ -351,7 +351,7 @@
 
     <script>
         // --- 🛡️ SECURITY PROTECTIONS (Domain Lock & Anti-Inspect) ---
-        // ⚠️ هام: ضع رابط موقعك على جيتهاب هنا بدلاً من "yourusername.github.io"
+        // ⚠️ تم وضع رابط حسابك الحقيقي هنا لفتح القفل
         const allowedDomains = ["abdalla201-cs.github.io", "localhost", "127.0.0.1", ""];
         
         if (!allowedDomains.includes(window.location.hostname) && window.location.hostname !== "") {
@@ -547,8 +547,8 @@
                     if (result === 'yes') {
                         colorStyle = 'style="color: #4ade80 !important;"'; 
                     } else if (result === 'no') {
-                        // استخدام الأحمر الصريح مع زيادة السماكة لجعله يبدو أغمق
-                        colorStyle = 'style="color: #FF0000 !important; font-weight: 900;"'; 
+                        // أحمر iOS القياسي (مريح للوضع الليلي ولن يغيره إيفرنوت)
+                        colorStyle = 'style="color: #ff3b30 !important;"'; 
                     } else {
                         colorStyle = 'style="color: #ffffff !important;"'; 
                     }
@@ -732,12 +732,12 @@
                         if (result === 'yes') {
                             colorCode = '#4ade80'; 
                         } else if (result === 'no') {
-                            // العودة للون الأحمر الذي نجح في تجاوز الفلتر
-                            colorCode = '#FF0000'; 
+                            // أحمر iOS القياسي
+                            colorCode = '#ff3b30'; 
                         }
                         
-                        // إضافة التغليف المزدوج مع أقصى سماكة للخط (900)
-                        cleanHtml += `<div><font color="${colorCode}"><span style="color:${colorCode}; font-weight:900;">${formatted}</span></font></div>`;
+                        // إزالة الخط العريض (bold) تماماً وإزالة التغليف المزدوج
+                        cleanHtml += `<div><span style="color:${colorCode};">${formatted}</span></div>`;
                         plainText += formatted + '\n';
                     });
 
