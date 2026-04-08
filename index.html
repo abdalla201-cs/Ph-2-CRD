@@ -790,7 +790,7 @@
                 html += `<div draggable="false"><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase; --inversion-type-color: simple;">${name}</span></div>`;
 
                 addresses.forEach(addr => {
-                    html += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">📍 ${addr}</span></div>`;
+                    html += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">${addr}</span></div>`;
                 });
 
                 emails.forEach(email => {
@@ -972,7 +972,7 @@
                     plainText += name + '\n';
 
                     addresses.forEach(addr => {
-                        cleanHtml += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">📍 ${addr}</span></div>\n`;
+                        cleanHtml += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">${addr}</span></div>\n`;
                         plainText += addr + '\n';
                     });
 
