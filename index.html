@@ -342,7 +342,8 @@
 
     <script>
         // --- 🛡️ SECURITY PROTECTIONS (Domain Lock & Anti-Inspect) ---
-        const allowedDomains = ["abdalla201-cs.github.io", "localhost", "127.0.0.1", ""];
+        // ⚠️ تحديث الرابط الجديد الخاص بـ Netlify
+        const allowedDomains = ["ph-2-crd.netlify.app", "localhost", "127.0.0.1", ""];
         
         if (!allowedDomains.includes(window.location.hostname) && window.location.hostname !== "") {
             document.body.innerHTML = "<div style='display:flex; justify-content:center; align-items:center; height:100vh; background:#121212; color:#ef4444; font-family:sans-serif;'><h2>🚫 Unauthorized Access. This tool is domain-locked.</h2></div>";
@@ -761,7 +762,7 @@
             document.getElementById('lookupCount').textContent = lookupResultsMap.size;
         }
 
-        // 👉 تحديث الواجهة (UI) بنفس هيكل إيفرنوت لكي يعمل النسخ اليدوي أيضاً
+        // 👉 محرك إيفرنوت للعرض 
         function updateCleanedNumbers() {
             const container = document.getElementById('cleanedNumbers');
             
@@ -946,7 +947,7 @@
 
         // 👉 محرك حقن إيفرنوت النهائي (Ultimate Evernote Injection)
         function copyToClipboard(elementId) {
-            let cleanHtml = '<meta charset="utf-8"><div data-en-clipboard="true">';
+            let cleanHtml = '<html><body><!--StartFragment-->';
             let plainText = '';
 
             if (elementId === 'cleanedNumbers') {
@@ -961,19 +962,22 @@
                     [...new Set(contact.addresses || [])].forEach(a => { if (!entry.addresses.includes(a)) entry.addresses.push(a); });
                 });
 
+                let isFirst = true;
+
                 nameToDataMap.forEach(({ numbers, emails, addresses }, name) => {
-                    
-                    // استخدام الشفرة السرية لـ Evernote 100%
-                    cleanHtml += `<div draggable="false"><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase; --inversion-type-color: simple;">${name}</span></div>`;
+                    let dataPm = isFirst ? 'data-pm-slice="1 1 []" data-en-clipboard="true"' : '';
+                    isFirst = false;
+
+                    cleanHtml += `<div draggable="false" ${dataPm}><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase; --inversion-type-color: simple;">${name}</span></div>\n`;
                     plainText += name + '\n';
 
                     addresses.forEach(addr => {
-                        cleanHtml += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">📍 ${addr}</span></div>`;
+                        cleanHtml += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">📍 ${addr}</span></div>\n`;
                         plainText += addr + '\n';
                     });
 
                     emails.forEach(email => {
-                        cleanHtml += `<div draggable="false"><a href="mailto:${email}" style="color: rgb(51, 204, 255); text-decoration: none; --inversion-type-color: simple;">${email}</a></div>`;
+                        cleanHtml += `<div draggable="false"><span style="color: rgb(51, 204, 255); text-decoration: none; --inversion-type-color: simple;">${email}</span></div>\n`;
                         plainText += email + '\n';
                     });
 
@@ -987,11 +991,11 @@
                             colorCode = 'rgb(252, 18, 51)'; // Exact Evernote Red
                         }
                         
-                        cleanHtml += `<div draggable="false"><span style="color: ${colorCode}; --inversion-type-color: simple;">${formatted}</span></div>`;
+                        cleanHtml += `<div draggable="false"><span style="color: ${colorCode}; --inversion-type-color: simple;">${formatted}</span></div>\n`;
                         plainText += formatted + '\n';
                     });
 
-                    cleanHtml += '<div draggable="false"><br></div>';
+                    cleanHtml += '<div draggable="false"><br></div>\n';
                     plainText += '\n';
                 });
 
@@ -999,12 +1003,26 @@
                 const element = document.getElementById(elementId);
                 plainText = element.innerText;
                 const lines = plainText.split('\n');
-                lines.forEach(line => {
-                    cleanHtml += `<div draggable="false"><span style="--inversion-type-color: simple;">${line}</span></div>`;
+                lines.forEach((line, index) => {
+                    let dataPm = index === 0 ? 'data-pm-slice="1 1 []" data-en-clipboard="true"' : '';
+                    cleanHtml += `<div draggable="false" ${dataPm}><span style="--inversion-type-color: simple;">${line}</span></div>\n`;
                 });
             }
 
-            cleanHtml += '</div>';
+            cleanHtml += '<!--EndFragment--></body></html>';
+
+            // ⚠️ التحديد الوهمي الإجباري لضمان تفعيل حدث النسخ في المتصفح ⚠️
+            const dummyDiv = document.createElement('div');
+            dummyDiv.textContent = 'dummy text for copy';
+            dummyDiv.style.position = 'absolute';
+            dummyDiv.style.left = '-9999px';
+            document.body.appendChild(dummyDiv);
+
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(dummyDiv);
+            selection.removeAllRanges();
+            selection.addRange(range);
 
             const copyListener = function(e) {
                 e.preventDefault();
@@ -1013,13 +1031,20 @@
             };
 
             document.addEventListener('copy', copyListener);
+            
             try {
-                document.execCommand('copy');
-                showNotification('Copied perfectly for Evernote!', 'success');
+                const successful = document.execCommand('copy');
+                if(successful) {
+                    showNotification('Copied perfectly for Evernote!', 'success');
+                } else {
+                    showNotification('Copy failed by browser', 'error');
+                }
             } catch (err) {
-                showNotification('Copy failed', 'error');
+                showNotification('Copy Error!', 'error');
             } finally {
                 document.removeEventListener('copy', copyListener);
+                selection.removeAllRanges();
+                document.body.removeChild(dummyDiv);
             }
         }
 
