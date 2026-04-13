@@ -253,11 +253,11 @@
                     
                     <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🧠 Select AI Model</label>
                     <select id="aiModelSelect" onchange="saveModelSelection(this.value)" style="width:100%; background:var(--bg-input); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; color:#fff; font-size:0.85rem; outline:none; margin-bottom:12px; appearance: auto; cursor:pointer;">
-                        <option value="gemini-1.5-flash" style="background:#1e1e1e;">⚡ Gemini 1.5 Flash (Stable & Fast)</option>
-                        <option value="gemini-2.0-flash" style="background:#1e1e1e;">🔥 Gemini 2.0 Flash (New Generation)</option>
-                        <option value="gemini-2.5-flash" style="background:#1e1e1e;">🌟 Gemini 2.5 Flash (Latest)</option>
+                        <option value="gemini-2.0-flash" style="background:#1e1e1e;">🔥 Gemini 2.0 Flash (Recommended)</option>
+                        <option value="gemini-2.5-flash" style="background:#1e1e1e;">🌟 Gemini 2.5 Flash (Latest & Best)</option>
+                        <option value="gemini-2.0-flash-lite" style="background:#1e1e1e;">⚡ Gemini 2.0 Flash-Lite (Fastest)</option>
+                        <option value="gemini-1.5-flash" style="background:#1e1e1e;">✅ Gemini 1.5 Flash (Stable)</option>
                         <option value="gemini-1.5-pro" style="background:#1e1e1e;">🚀 Gemini 1.5 Pro (Highest Quality)</option>
-                        <option value="gemini-1.5-flash-8b" style="background:#1e1e1e;">💨 Gemini 1.5 Flash-8B (Lightweight)</option>
                     </select>
 
                     <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🔑 Gemini API Key <span style="color:var(--accent-red);">(Required for AI OCR)</span></label>
@@ -391,11 +391,22 @@
         }
 
         function extractPhoneNumbers(text) {
-            const normalized = text.replace(/[\u2013\u2014\u2012]/g, '-');
-            const phoneRegex = /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
-            const matches = normalized.match(phoneRegex) || [];
+            // 1. Pre-process text to fix common OCR visual errors (T->7, O->0, etc.)
+            let processedText = text.replace(/[\u2013\u2014\u2012]/g, '-');
+            
+            // Fix "T" at start of phone-like patterns (e.g., T18 -> 718)
+            processedText = processedText.replace(/\bT(\d{2}[-.\s]?\d{3}[-.\s]?\d{4})\b/g, '7$1');
+            
+            // Fix "O" or "o" that should be "0" (e.g., O46 -> 046)
+            processedText = processedText.replace(/\b[Oo](\d{2}[-.\s]?\d{3}[-.\s]?\d{4})\b/g, '0$1');
 
-            const rawDigitGroups = normalized.match(/\d{10,}/g) || [];
+            // 2. Flexible Regex to catch numbers even with some OCR noise
+            // Matches: (718) 772-3348, 718-772-3348, 718.772.3348, 718 772 3348
+            const phoneRegex = /(?:\+?1[-.\s]?)?\(?[0-9T]{3}\)?[-.\s]?[0-9Oo]{3}[-.\s]?[0-9]{4}/gi;
+            let matches = processedText.match(phoneRegex) || [];
+
+            // 3. Raw digit group extraction
+            const rawDigitGroups = processedText.match(/[0-9]{10,}/g) || [];
             rawDigitGroups.forEach(group => {
                 for (let i = 0; i <= group.length - 10; i++) {
                     matches.push(group.slice(i, i + 10));
@@ -404,7 +415,14 @@
 
             const seen = new Set();
             return matches
-                .map(num => num.replace(/[^\d]/g, ''))
+                .map(num => {
+                    // Final cleanup: convert T/O to digits and remove non-digits
+                    let clean = num.toUpperCase()
+                        .replace(/T/g, '7')
+                        .replace(/O/g, '0')
+                        .replace(/[^\d]/g, '');
+                    return clean;
+                })
                 .map(num => num.length > 10 ? num.slice(-10) : num)
                 .filter(num => num.length === 10)
                 .filter(num => !seen.has(num) && seen.add(num));
@@ -513,10 +531,13 @@
                     textToAnalyze = textToAnalyze.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '');
                     textToAnalyze = textToAnalyze.replace(/\b(phone|number|cell|mobile|home|work|primary|secondary|direct|office|contact|fax|landline|wireless|tel|telephone|or)\b/gi, '');
                     
+                    // Removed DNC logic to allow numbers with descriptive text
+                    /*
                     const pureWords = textToAnalyze.match(/[a-zA-Z]{3,}/g) || [];
                     if (pureWords.length > 4) {
                         numbers.forEach(n => globalDncNumbers.add(n));
                     }
+                    */
                 }
 
                 if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3 && !line.includes('@')) {
@@ -631,10 +652,13 @@
                     textToAnalyze = textToAnalyze.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '');
                     textToAnalyze = textToAnalyze.replace(/\b(phone|number|cell|mobile|home|work|primary|secondary|direct|office|contact|fax|landline|wireless|tel|telephone|or)\b/gi, '');
                     
+                    // Removed DNC logic to allow numbers with descriptive text
+                    /*
                     const pureWords = textToAnalyze.match(/[a-zA-Z]{3,}/g) || [];
                     if (pureWords.length > 4) {
                         numbers.forEach(n => globalDncNumbers.add(n));
                     }
+                    */
                 }
             });
 
@@ -764,35 +788,55 @@
 
         // 👉 محرك إيفرنوت للعرض 
         function updateCleanedNumbers() {
-    const container = document.getElementById('cleanedNumbers');
-    if (contacts.length === 0) { container.innerHTML = ''; return; }
+            const container = document.getElementById('cleanedNumbers');
+            
+            if (contacts.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
 
-    let html = '';
-    contacts.forEach(contact => {
-        html += '<div class="contact-group" style="margin-bottom: 20px;">';
-        html += `<div draggable="false"><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase;">${contact.name}</span></div>`;
+            const nameToDataMap = new Map();
 
-        const uniqueAddresses = [...new Set(contact.addresses || [])];
-        const uniqueEmails = [...new Set(contact.emails || [])];
-        const uniqueNumbers = [...new Set(contact.numbers)];
+            contacts.forEach(contact => {
+                if (!nameToDataMap.has(contact.name)) {
+                    nameToDataMap.set(contact.name, { numbers: [], emails: [], addresses: [] });
+                }
+                const entry = nameToDataMap.get(contact.name);
+                contact.numbers.forEach(n => { if (!entry.numbers.includes(n)) entry.numbers.push(n); });
+                [...new Set(contact.emails || [])].forEach(e => { if (!entry.emails.includes(e)) entry.emails.push(e); });
+                [...new Set(contact.addresses || [])].forEach(a => { if (!entry.addresses.includes(a)) entry.addresses.push(a); });
+            });
 
-        uniqueAddresses.forEach(addr => {
-            html += `<div draggable="false"><span style="color: rgb(255, 255, 0);">📍 ${addr}</span></div>`;
-        });
-        uniqueEmails.forEach(email => {
-            html += `<div draggable="false"><a href="mailto:${email}" style="color: rgb(51, 204, 255); text-decoration: none;">${email}</a></div>`;
-        });
-        uniqueNumbers.forEach(number => {
-            const result = lookupResultsMap.get(number);
-            let colorCode = 'rgb(255, 255, 255)';
-            if (result === 'yes') colorCode = 'rgb(24, 168, 65)';
-            else if (result === 'no') colorCode = 'rgb(252, 18, 51)';
-            html += `<div draggable="false"><span style="color: ${colorCode};">${formatPhoneNumber(number)}</span></div>`;
-        });
-        html += '</div>';
-    });
-    container.innerHTML = html;
-}
+            let html = '';
+            nameToDataMap.forEach(({ numbers, emails, addresses }, name) => {
+                html += '<div class="contact-group" style="margin-bottom: 20px;">';
+                
+                html += `<div draggable="false"><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase; --inversion-type-color: simple;">${name}</span></div>`;
+
+                addresses.forEach(addr => {
+                    html += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">📍 ${addr}</span></div>`;
+                });
+
+                emails.forEach(email => {
+                    html += `<div draggable="false"><a href="mailto:${email}" style="color: rgb(51, 204, 255); text-decoration: none; --inversion-type-color: simple;">${email}</a></div>`;
+                });
+
+                numbers.forEach((number) => {
+                    const result = lookupResultsMap.get(number);
+                    let colorCode = 'rgb(255, 255, 255)'; 
+                    if (result === 'yes') {
+                        colorCode = 'rgb(24, 168, 65)'; // Exact Evernote Green
+                    } else if (result === 'no') {
+                        colorCode = 'rgb(252, 18, 51)'; // Exact Evernote Red
+                    }
+                    html += `<div draggable="false"><span style="color: ${colorCode}; --inversion-type-color: simple;">${formatPhoneNumber(number)}</span></div>`;
+                });
+
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+        }
 
         function updateAmericanNumbers() {
             const container = document.getElementById('americanNumbers');
@@ -869,6 +913,7 @@
             });
 
             allNumbers = contacts.flatMap(c => c.numbers);
+            deduplicateContactsGlobally();
 
             updateStats();
             updateCleanedNumbers();
@@ -1107,7 +1152,7 @@
         }
 
         function loadModelSelection() {
-            const model = localStorage.getItem('aiModelSelection') || 'gemini-1.5-flash';
+            const model = localStorage.getItem('aiModelSelection') || 'gemini-2.0-flash';
             const select = document.getElementById('aiModelSelect');
             if(select) select.value = model;
             return model;
@@ -1129,17 +1174,37 @@
                 }
                 const data = await response.json();
                 
-                const validModels = data.models
+                const modelSelect = document.getElementById('aiModelSelect');
+                const currentSelection = modelSelect.value;
+                modelSelect.innerHTML = ''; // Clear current options
+
+                const availableModels = data.models
                     .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
-                    .map(m => `✅ ${m.name.replace('models/', '')} \n   (${m.displayName})`);
+                    .map(m => m.name.replace('models/', ''));
+
+                availableModels.forEach(modelId => {
+                    const option = document.createElement('option');
+                    option.value = modelId;
+                    option.textContent = `🤖 ${modelId}`;
+                    option.style.background = '#1e1e1e';
+                    modelSelect.appendChild(option);
+                });
+
+                // Restore selection if still available, otherwise pick first
+                if (availableModels.includes(currentSelection)) {
+                    modelSelect.value = currentSelection;
+                } else if (availableModels.length > 0) {
+                    modelSelect.value = availableModels[0];
+                    saveModelSelection(availableModels[0]);
+                }
                 
                 const debugPanel = document.getElementById('debugPanel');
                 const debugOutput = document.getElementById('debugOutput');
                 
-                debugOutput.value = "🎉 المفتاح يعمل بنجاح!\n\n🤖 الموديلات المتاحة للاستخدام مع هذا المفتاح:\n\n" + validModels.join('\n\n');
+                debugOutput.value = "🎉 المفتاح يعمل بنجاح!\n\n🤖 تم تحديث قائمة الموديلات المتاحة لمفتاحك تلقائياً.\n\nالموديلات المكتشفة:\n" + availableModels.join('\n');
                 debugPanel.style.display = 'block';
                 
-                showNotification('المفتاح سليم! راجع قائمة الموديلات بالأسفل.', 'success');
+                showNotification('تم تحديث قائمة الموديلات المتاحة لمفتاحك!', 'success');
             } catch (error) {
                 showNotification('خطأ في المفتاح: ' + error.message, 'error');
                 
@@ -1312,7 +1377,12 @@
                             allExtractedText += text + '\n\n';
                             progressFill.style.width = Math.round(((i + 1) / files.length) * 100) + '%';
                         } catch (geminiErr) {
-                            showNotification(`⚠️ AI failed (${geminiErr.message}). Using basic OCR...`, 'error');
+                            const isModelError = geminiErr.message.includes('not found') || geminiErr.message.includes('مدعوم');
+                            const errorMsg = isModelError ? 
+                                `⚠️ الموديل المختار غير مدعوم لمفتاحك. يرجى الضغط على زر 🧪 لفحص الموديلات المتاحة.` : 
+                                `⚠️ فشل الـ AI (${geminiErr.message}). سيتم استخدام المحرك الأساسي...`;
+                            
+                            showNotification(errorMsg, 'error');
                             const processed = await preprocessImage(file);
                             const result = await Tesseract.recognize(processed, 'eng');
                             allExtractedText += result.data.text + '\n\n';
@@ -1375,6 +1445,7 @@
                 });
 
                 allNumbers = contacts.flatMap(c => c.numbers);
+                deduplicateContactsGlobally();
 
                 updateStats();
                 updateCleanedNumbers();
