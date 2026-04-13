@@ -764,55 +764,35 @@
 
         // 👉 محرك إيفرنوت للعرض 
         function updateCleanedNumbers() {
-            const container = document.getElementById('cleanedNumbers');
-            
-            if (contacts.length === 0) {
-                container.innerHTML = '';
-                return;
-            }
+    const container = document.getElementById('cleanedNumbers');
+    if (contacts.length === 0) { container.innerHTML = ''; return; }
 
-            const nameToDataMap = new Map();
+    let html = '';
+    contacts.forEach(contact => {
+        html += '<div class="contact-group" style="margin-bottom: 20px;">';
+        html += `<div draggable="false"><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase;">${contact.name}</span></div>`;
 
-            contacts.forEach(contact => {
-                if (!nameToDataMap.has(contact.name)) {
-                    nameToDataMap.set(contact.name, { numbers: [], emails: [], addresses: [] });
-                }
-                const entry = nameToDataMap.get(contact.name);
-                contact.numbers.forEach(n => { if (!entry.numbers.includes(n)) entry.numbers.push(n); });
-                [...new Set(contact.emails || [])].forEach(e => { if (!entry.emails.includes(e)) entry.emails.push(e); });
-                [...new Set(contact.addresses || [])].forEach(a => { if (!entry.addresses.includes(a)) entry.addresses.push(a); });
-            });
+        const uniqueAddresses = [...new Set(contact.addresses || [])];
+        const uniqueEmails = [...new Set(contact.emails || [])];
+        const uniqueNumbers = [...new Set(contact.numbers)];
 
-            let html = '';
-            nameToDataMap.forEach(({ numbers, emails, addresses }, name) => {
-                html += '<div class="contact-group" style="margin-bottom: 20px;">';
-                
-                html += `<div draggable="false"><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase; --inversion-type-color: simple;">${name}</span></div>`;
-
-                addresses.forEach(addr => {
-                    html += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">📍 ${addr}</span></div>`;
-                });
-
-                emails.forEach(email => {
-                    html += `<div draggable="false"><a href="mailto:${email}" style="color: rgb(51, 204, 255); text-decoration: none; --inversion-type-color: simple;">${email}</a></div>`;
-                });
-
-                numbers.forEach((number) => {
-                    const result = lookupResultsMap.get(number);
-                    let colorCode = 'rgb(255, 255, 255)'; 
-                    if (result === 'yes') {
-                        colorCode = 'rgb(24, 168, 65)'; // Exact Evernote Green
-                    } else if (result === 'no') {
-                        colorCode = 'rgb(252, 18, 51)'; // Exact Evernote Red
-                    }
-                    html += `<div draggable="false"><span style="color: ${colorCode}; --inversion-type-color: simple;">${formatPhoneNumber(number)}</span></div>`;
-                });
-
-                html += '</div>';
-            });
-
-            container.innerHTML = html;
-        }
+        uniqueAddresses.forEach(addr => {
+            html += `<div draggable="false"><span style="color: rgb(255, 255, 0);">📍 ${addr}</span></div>`;
+        });
+        uniqueEmails.forEach(email => {
+            html += `<div draggable="false"><a href="mailto:${email}" style="color: rgb(51, 204, 255); text-decoration: none;">${email}</a></div>`;
+        });
+        uniqueNumbers.forEach(number => {
+            const result = lookupResultsMap.get(number);
+            let colorCode = 'rgb(255, 255, 255)';
+            if (result === 'yes') colorCode = 'rgb(24, 168, 65)';
+            else if (result === 'no') colorCode = 'rgb(252, 18, 51)';
+            html += `<div draggable="false"><span style="color: ${colorCode};">${formatPhoneNumber(number)}</span></div>`;
+        });
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
 
         function updateAmericanNumbers() {
             const container = document.getElementById('americanNumbers');
@@ -889,7 +869,6 @@
             });
 
             allNumbers = contacts.flatMap(c => c.numbers);
-            deduplicateContactsGlobally();
 
             updateStats();
             updateCleanedNumbers();
@@ -1396,7 +1375,6 @@
                 });
 
                 allNumbers = contacts.flatMap(c => c.numbers);
-                deduplicateContactsGlobally();
 
                 updateStats();
                 updateCleanedNumbers();
