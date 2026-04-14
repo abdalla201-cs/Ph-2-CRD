@@ -45,8 +45,6 @@
             gap: 20px;
         }
 
-        .header { display: none; } 
-
         /* ── Grid Layouts ── */
         .top-panel {
             display: grid;
@@ -220,6 +218,7 @@
 
         .contact-group { margin-bottom: 15px; }
         .contact-name { font-weight: 700; color: var(--accent-blue); margin-bottom: 4px; font-size: 0.9rem; text-transform: uppercase; }
+        .contact-numbers { margin-top: 0px !important; }
         .contact-numbers div, .number-list div, .duplicate-item { padding: 4px 0; }
         .duplicate-item { display: flex; justify-content: space-between; }
         .duplicate-count { color: var(--text-muted); font-size: 0.8rem; }
@@ -250,27 +249,18 @@
                 <h3><span>🖼️ OCR Image Upload</span></h3>
                 
                 <div style="margin-bottom:15px; background:rgba(0,0,0,0.2); border-radius:8px; padding:15px; border:1px solid rgba(255,255,255,0.05);">
-                    <h4 style="font-size:0.85rem; color:var(--accent-blue); margin-bottom:10px;">⚙️ AI Model Settings</h4>
+                    <h4 style="font-size:0.85rem; color:var(--accent-blue); margin-bottom:10px;">⚙️ Gemini AI Settings</h4>
                     
-                    <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🧠 Select AI Model</label>
-                    <select id="aiModelSelect" onchange="handleModelChange(this.value)" style="width:100%; background:var(--bg-input); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; color:#fff; font-size:0.85rem; outline:none; margin-bottom:12px; appearance: auto; cursor:pointer;">
-                        <optgroup label="Google Gemini">
-                            <option value="gemini-2.0-flash" style="background:#1e1e1e;">🔥 Gemini 2.0 Flash (Recommended)</option>
-                            <option value="gemini-2.5-flash" style="background:#1e1e1e;">🌟 Gemini 2.5 Flash (Latest & Best)</option>
-                            <option value="gemini-2.0-flash-lite" style="background:#1e1e1e;">⚡ Gemini 2.0 Flash-Lite (Fastest)</option>
-                            <option value="gemini-1.5-flash" style="background:#1e1e1e;">✅ Gemini 1.5 Flash (Stable)</option>
-                            <option value="gemini-1.5-pro" style="background:#1e1e1e;">🚀 Gemini 1.5 Pro (Highest Quality)</option>
-                        </optgroup>
-                        <optgroup label="Zhipu AI & Modal (GLM)">
-                            <option value="glm-modal" style="background:#1e1e1e;">🟣 GLM-5.1-FP8 (Modal API)</option>
-                            <option value="glm-4v" style="background:#1e1e1e;">🟣 GLM-4V (Zhipu API)</option>
-                        </optgroup>
+                    <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🧠 Select Model</label>
+                    <select id="aiModelSelect" onchange="saveModelSelection(this.value)" style="width:100%; background:var(--bg-input); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; color:#fff; font-size:0.85rem; outline:none; margin-bottom:12px; appearance: auto; cursor:pointer;">
+                        <option value="gemini-2.0-flash" style="background:#1e1e1e;">🔥 Gemini 2.0 Flash (Default)</option>
+                        <option value="gemini-1.5-flash" style="background:#1e1e1e;">✅ Gemini 1.5 Flash</option>
                     </select>
 
-                    <label id="apiKeyLabel" style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🔑 Gemini API Key <span style="color:var(--accent-red);">(Required for AI OCR)</span></label>
+                    <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🔑 API Key <span style="color:var(--accent-red);">(Required for AI OCR)</span></label>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="password" id="geminiApiKey" placeholder="Enter your API key..." class="api-input" style="margin-bottom:0;"
-                            oninput="saveApiKey(this.value)" />
+                        <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key..." class="api-input" style="margin-bottom:0;"
+                            oninput="saveGeminiKey(this.value)" />
                         <button class="btn-secondary" onclick="testApiKey()" style="padding: 8px; margin: 0; min-width: 40px;" title="فحص المفتاح ومعرفة الموديلات المتاحة">🧪</button>
                         <span id="geminiStatus" style="font-size:0.75rem; white-space:nowrap; opacity:0.75;">⬜ Not set</span>
                     </div>
@@ -348,7 +338,7 @@
     </div>
 
     <script>
-        // --- 🛡️ SECURITY PROTECTIONS (Domain Lock & Anti-Inspect) ---
+        // --- 🛡️ SECURITY PROTECTIONS ---
         const allowedDomains = ["thunderous-begonia-f0035c.netlify.app", "localhost", "127.0.0.1", ""];
         
         if (!allowedDomains.includes(window.location.hostname) && window.location.hostname !== "") {
@@ -362,26 +352,21 @@
             if (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0))) return false;
             if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false; 
         };
-        // -------------------------------------------------------------
 
         let allNumbers = [];
         let contacts = [];
         let lookupResultsMap = new Map();
         let crossContactDuplicates = new Map();
 
-        // ──────────────────────────────────────────
-
         function deduplicateContactsGlobally() {
             const globalSeen = new Set();
             crossContactDuplicates = new Map();
-
             const numberTotalCount = new Map();
             contacts.forEach(contact => {
                 contact.numbers.forEach(n => {
                     numberTotalCount.set(n, (numberTotalCount.get(n) || 0) + 1);
                 });
             });
-
             contacts.forEach(contact => {
                 contact.numbers = contact.numbers.filter(n => {
                     if (globalSeen.has(n)) return false;
@@ -392,38 +377,25 @@
                     return true;
                 });
             });
-
             allNumbers = contacts.flatMap(c => c.numbers);
         }
 
-        // ── 🧠 المعمارية الجديدة لاستخراج الأرقام (Normalization & Sanitization) ──
         function extractPhoneNumbers(text) {
             const phonePattern = /(?:\+?1[-.\s]?)?\(?[0-9OoIl]{3}\)?[-.\s]?[0-9OoIl]{3}[-.\s]?[0-9OoIl]{4}/gi;
             let matches = text.match(phonePattern) || [];
-
             const noSpaceText = text.replace(/\s+/g, '');
             const scatteredGroups = noSpaceText.match(/[0-9OoIl]{10,}/gi) || [];
             matches.push(...scatteredGroups);
-
             const seen = new Set();
-            
             return matches
-                .map(num => {
-                    return num
-                        .replace(/[Oo]/g, '0')        // Normalize O -> 0
-                        .replace(/[Il]/g, '1')        // Normalize I, l -> 1
-                        .replace(/[^\d]/g, '');       // Sanitize: Remove all non-digits
-                })
+                .map(num => num.replace(/[Oo]/g, '0').replace(/[Il]/g, '1').replace(/[^\d]/g, ''))
                 .map(num => num.length > 10 ? num.slice(-10) : num)
                 .filter(num => num.length === 10)
                 .filter(num => !seen.has(num) && seen.add(num));
         }
 
         const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-
-        function extractEmails(line) {
-            return line.match(emailRegex) || [];
-        }
+        function extractEmails(line) { return line.match(emailRegex) || []; }
 
         function extractAddressFromLine(line) {
             if (/\t/.test(line)) return null;
@@ -438,59 +410,11 @@
 
         function isValidContactName(name) {
             const lowerName = name.toLowerCase().trim();
-            
-            const invalidWords = [
-                'repeat', 'no work', 'wrong', 'do not call', 'dnc', 'not interested',
-                'voicemail', 'disconnected', 'busy', 'no answer', 'left message', 'spoke',
-                'callback', 'call back', 'texted', 'dead', 'sold', 'spanish', 'language',
-                'invalid', 'status', 'update', 'said', 'told', 'interested', 'machine', 
-                'mailbox', 'message', 'none', 'n/a', 'na', 'not in service', 'no longer',
-                'business', 'out of service', 'does not work', 'stop', 'quit', 'opt out',
-                'remove', 'hang up', 'hung up', 'bad number', 'wrong number', 'not working',
-                'no english', 'english', 'not', 'dont', 'doesnt', 'work', 'worked', 'working',
-                'number', 'phone', 'contact', 'call', 'caller', 'cancel', 'cancelled',
-                'delete', 'deleted', 'unknown', 'fake', 'bogus', 'scam', 'spam', 'spamming',
-                'scammer', 'fraud', 'fraudulent', 'hello', 'owner', 'manager', 'tenant',
-                'landlord', 'resident', 'husband', 'wife', 'son', 'daughter', 'father',
-                'mother', 'brother', 'sister', 'uncle', 'aunt', 'cousin', 'nephew', 'niece',
-                'grandfather', 'grandmother', 'grandson', 'granddaughter', 'family', 'friend',
-                'neighbor', 'associate', 'relative', 'relatives', 'neighbors', 'associates',
-                'info', 'information', 'details', 'detail', 'data', 'record', 'records',
-                'file', 'files', 'account', 'accounts', 'profile', 'profiles', 'report',
-                'reports', 'document', 'documents', 'vm', 'lm', 'cb', 'ni', 'wn', 'bad',
-                'good', 'yes', 'no', 'true', 'false', 'same', 'diff', 'different', 'new',
-                'old', 'current', 'previous', 'historic', 'voice', 'line', 'cell', 'mobile',
-                'landline', 'wireless', 'telephone', 'tel', 'fax', 'email', 'address', 'addr',
-                'location', 'place', 'property', 'properties', 'home', 'house', 'apartment',
-                'apt', 'suite', 'ste', 'unit', 'room', 'rm', 'building', 'bldg', 'floor',
-                'fl', 'level', 'lvl', 'street', 'st', 'avenue', 'ave', 'boulevard', 'blvd',
-                'drive', 'dr', 'road', 'rd', 'lane', 'ln', 'way', 'court', 'ct', 'terrace',
-                'ter', 'parkway', 'pkwy', 'highway', 'hwy', 'circle', 'cir', 'loop', 'trail',
-                'trl', 'row', 'square', 'sq', 'broadway', 'crossing', 'xing', 'alley',
-                'left vm', 'lm on', 'did not answer', 'hanged up', 'not int', 'no int',
-                'take me off', 'remove me', 'wrong num', 'wrong person', 'wrong contact',
-                'bad num', 'mailbox full', 'vm full', 'voicemail full', 'not setup',
-                'not set up', 'busy signal', 'fast busy', 'fax machine', 'modem', 'screeching',
-                'dead air', 'silence', 'dropped', 'dropped call', 'call dropped', 'call later',
-                'try again', 'try later', 'call tomorrow', 'appointment', 'appt', 'schedule',
-                'scheduled', 'meeting', 'follow up', 'lead', 'prospect', 'opportunity',
-                'deal', 'client', 'customer', 'patient', 'buyer', 'seller', 'renter',
-                'leaser', 'lessee', 'lessor', 'broker', 'agent', 'realtor', 'real estate',
-                'realty', 'property management', 'pm', 'llc', 'inc', 'corp', 'corporation',
-                'company', 'co', 'ltd', 'limited', 'group', 'grp', 'partners', 'enterprises',
-                'ent', 'holdings', 'investments', 'inv', 'trust', 'fund', 'estate of',
-                'heirs of', 'care of', 'attn', 'attention'
-            ];
-            
-            for (let word of invalidWords) {
-                const regex = new RegExp('\\b' + word + '\\b', 'i');
-                if (regex.test(lowerName)) return false;
-            }
-            
+            const invalidWords = ['repeat', 'no work', 'wrong', 'do not call', 'dnc', 'not interested', 'voicemail', 'disconnected', 'busy', 'no answer', 'left message', 'spoke', 'callback', 'call back', 'texted', 'dead', 'sold', 'spanish', 'language', 'invalid', 'status', 'update', 'said', 'told', 'interested', 'machine', 'mailbox', 'message', 'none', 'n/a', 'na', 'not in service', 'no longer', 'business', 'out of service', 'does not work', 'stop', 'quit', 'opt out', 'remove', 'hang up', 'hung up', 'bad number', 'wrong number', 'not working', 'no english', 'english', 'not', 'dont', 'doesnt', 'work', 'worked', 'working', 'number', 'phone', 'contact', 'call', 'caller', 'cancel', 'cancelled', 'delete', 'deleted', 'unknown', 'fake', 'bogus', 'scam', 'spam', 'spamming', 'scammer', 'fraud', 'fraudulent', 'hello', 'owner', 'manager', 'tenant', 'landlord', 'resident', 'husband', 'wife', 'son', 'daughter', 'father', 'mother', 'brother', 'sister', 'uncle', 'aunt', 'cousin', 'nephew', 'niece', 'grandfather', 'grandmother', 'grandson', 'granddaughter', 'family', 'friend', 'neighbor', 'associate', 'relative', 'relatives', 'neighbors', 'associates', 'info', 'information', 'details', 'detail', 'data', 'record', 'records', 'file', 'files', 'account', 'accounts', 'profile', 'profiles', 'report', 'reports', 'document', 'documents', 'vm', 'lm', 'cb', 'ni', 'wn', 'bad', 'good', 'yes', 'no', 'true', 'false', 'same', 'diff', 'different', 'new', 'old', 'current', 'previous', 'historic', 'voice', 'line', 'cell', 'mobile', 'landline', 'wireless', 'telephone', 'tel', 'fax', 'email', 'address', 'addr', 'location', 'place', 'property', 'properties', 'home', 'house', 'apartment', 'apt', 'suite', 'ste', 'unit', 'room', 'rm', 'building', 'bldg', 'floor', 'fl', 'level', 'lvl', 'street', 'st', 'avenue', 'ave', 'boulevard', 'blvd', 'drive', 'dr', 'road', 'rd', 'lane', 'ln', 'way', 'court', 'ct', 'terrace', 'ter', 'parkway', 'pkwy', 'highway', 'hwy', 'circle', 'cir', 'loop', 'trail', 'trl', 'row', 'square', 'sq', 'broadway', 'crossing', 'xing', 'alley', 'left vm', 'lm on', 'did not answer', 'hanged up', 'not int', 'no int', 'take me off', 'remove me', 'wrong num', 'wrong person', 'wrong contact', 'bad num', 'mailbox full', 'vm full', 'voicemail full', 'not setup', 'not set up', 'busy signal', 'fast busy', 'fax machine', 'modem', 'screeching', 'dead air', 'silence', 'dropped', 'dropped call', 'call dropped', 'call later', 'try again', 'try later', 'call tomorrow', 'appointment', 'appt', 'schedule', 'scheduled', 'meeting', 'follow up', 'lead', 'prospect', 'opportunity', 'deal', 'client', 'customer', 'patient', 'buyer', 'seller', 'renter', 'leaser', 'lessee', 'lessor', 'broker', 'agent', 'realtor', 'real estate', 'realty', 'property management', 'pm', 'llc', 'inc', 'corp', 'corporation', 'company', 'co', 'ltd', 'limited', 'group', 'grp', 'partners', 'enterprises', 'ent', 'holdings', 'investments', 'inv', 'trust', 'fund', 'estate of', 'heirs of', 'care of', 'attn', 'attention'];
+            for (let word of invalidWords) { if (new RegExp('\\b' + word + '\\b', 'i').test(lowerName)) return false; }
             const wordsCount = lowerName.split(/\s+/).length;
             if (wordsCount > 4) return false;
             if (wordsCount === 1 && lowerName.length < 3) return false;
-
             return true;
         }
 
@@ -498,47 +422,23 @@
             const lines = text.split('\n');
             const newContacts = [];
             let currentContact = null;
-            
             let orphanNumbers = [];
             let orphanEmails = [];
             let orphanAddresses = [];
-            let globalDncNumbers = new Set(); 
-
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
-
                 const cleanedLine = line.replace(/\s+\d{1,3}\s*$/, '').trim();
                 const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i);
-                
                 const emails = extractEmails(line);
                 const addr = extractAddressFromLine(line);
                 const numbers = extractPhoneNumbers(line);
-
-                if (numbers.length > 0) {
-                    // إصلاح الحذف الخاطئ للأرقام: نحذف الرقم فقط إذا كان بجانبه كلمة تدل على أنه خاطئ صراحة
-                    const badNumRegex = /\b(wrong|do not call|dnc|disconnected|bad number|not in service|out of service|does not work|stop|quit|opt out|remove|not working|wrong num|bad num|take me off|dead)\b/i;
-                    if (badNumRegex.test(line)) {
-                        numbers.forEach(n => globalDncNumbers.add(n));
-                    }
-                }
-
                 if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3 && !line.includes('@')) {
                     const potentialName = nameMatch[1].trim();
-                    
                     if (isValidContactName(potentialName)) {
-                        if (currentContact) {
-                            newContacts.push(currentContact);
-                        }
-                        currentContact = {
-                            name: potentialName,
-                            numbers: [...orphanNumbers],
-                            emails: [...orphanEmails],
-                            addresses: [...orphanAddresses]
-                        };
-                        orphanNumbers = [];
-                        orphanEmails = [];
-                        orphanAddresses = [];
+                        if (currentContact) newContacts.push(currentContact);
+                        currentContact = { name: potentialName, numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses] };
+                        orphanNumbers = []; orphanEmails = []; orphanAddresses = [];
                     } else {
                         if (currentContact) {
                             currentContact.emails.push(...emails);
@@ -553,39 +453,19 @@
                 } else {
                     if (currentContact) {
                         currentContact.emails.push(...emails);
-                        if (addr && !currentContact.addresses.includes(addr)) {
-                            currentContact.addresses.push(addr);
-                        }
-                        numbers.forEach(n => {
-                            if (!currentContact.numbers.includes(n)) currentContact.numbers.push(n);
-                        });
+                        if (addr && !currentContact.addresses.includes(addr)) currentContact.addresses.push(addr);
+                        numbers.forEach(n => { if (!currentContact.numbers.includes(n)) currentContact.numbers.push(n); });
                     } else {
                         orphanEmails.push(...emails);
-                        if (addr && !orphanAddresses.includes(addr)) {
-                            orphanAddresses.push(addr);
-                        }
-                        numbers.forEach(n => {
-                            if (!orphanNumbers.includes(n)) orphanNumbers.push(n);
-                        });
+                        if (addr && !orphanAddresses.includes(addr)) orphanAddresses.push(addr);
+                        numbers.forEach(n => { if (!orphanNumbers.includes(n)) orphanNumbers.push(n); });
                     }
                 }
             }
-
-            if (currentContact) {
-                newContacts.push(currentContact);
-            } else if (orphanNumbers.length > 0 || orphanEmails.length > 0 || orphanAddresses.length > 0) {
-                newContacts.push({
-                    name: "EXTRACTED DATA",
-                    numbers: orphanNumbers,
-                    emails: orphanEmails,
-                    addresses: orphanAddresses
-                });
+            if (currentContact) newContacts.push(currentContact);
+            else if (orphanNumbers.length || orphanEmails.length || orphanAddresses.length) {
+                newContacts.push({ name: "EXTRACTED DATA", numbers: orphanNumbers, emails: orphanEmails, addresses: orphanAddresses });
             }
-
-            newContacts.forEach(c => {
-                c.numbers = c.numbers.filter(n => !globalDncNumbers.has(n));
-            });
-
             return newContacts.filter(c => c.numbers.length > 0 || c.emails.length > 0 || c.addresses.length > 0);
         }
 
@@ -594,75 +474,20 @@
             const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i;
             const prefixedNamePattern = /(?:Relatives|Neighbors|Associates)\s+For:\s+([A-Z][A-Z\s]+[A-Z])/i;
             const allCapsNamePattern = /^([A-Z]{2,}(?:\s+[A-Z]{1,2}(?:\s+[A-Z]{2,})+))$/;
-
             let firstName = null;
-
-            for (const line of lines) { 
-                const m = line.match(prefixedNamePattern); 
-                if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } 
-            }
-            if (!firstName) { 
-                for (const line of lines) { 
-                    if (standaloneNamePattern.test(line) && !line.match(/\d/) && line.length > 3) {
-                        const m = line.match(standaloneNamePattern);
-                        if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } 
-                    } 
-                } 
-            }
-            if (!firstName) { 
-                for (const line of lines) { 
-                    if (line.match(/\d/) || /SSN|DOB|LexID|Gender|View|Setup|Report|Locator|Confidence|Carrier|Feedback|Landline|Wireless|Address|Phone|Subject|Information|Next|Steps|Relatives|Neighbors|Associates/i.test(line)) continue; 
-                    const m = line.match(allCapsNamePattern); 
-                    if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } 
-                } 
-            }
-            if (!firstName) { 
-                const m = text.match(/\b([A-Z]{2,}(?:\s+[A-Z]{1,2}\b)?(?:\s+[A-Z]{2,})+)/); 
-                if (m && isValidContactName(m[1])) firstName = m[1].trim(); 
-            }
-
+            for (const line of lines) { const m = line.match(prefixedNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } }
+            if (!firstName) { for (const line of lines) { if (standaloneNamePattern.test(line) && !line.match(/\d/) && line.length > 3) { const m = line.match(standaloneNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } } }
+            if (!firstName) { for (const line of lines) { if (line.match(/\d/) || /SSN|DOB|LexID|Gender|View|Setup|Report|Locator|Confidence|Carrier|Feedback|Landline|Wireless|Address|Phone|Subject|Information|Next|Steps|Relatives|Neighbors|Associates/i.test(line)) continue; const m = line.match(allCapsNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } }
+            if (!firstName) { const m = text.match(/\b([A-Z]{2,}(?:\s+[A-Z]{1,2}\b)?(?:\s+[A-Z]{2,})+)/); if (m && isValidContactName(m[1])) firstName = m[1].trim(); }
             const allEmails = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
             const allAddresses = text.split('\n').map(l => extractAddressFromLine(l.trim())).filter(Boolean);
-
-            let globalDncNumbers = new Set();
-            lines.forEach(line => {
-                const numbers = extractPhoneNumbers(line);
-                if (numbers.length > 0) {
-                    const badNumRegex = /\b(wrong|do not call|dnc|disconnected|bad number|not in service|out of service|does not work|stop|quit|opt out|remove|not working|wrong num|bad num|take me off|dead)\b/i;
-                    if (badNumRegex.test(line)) {
-                        numbers.forEach(n => globalDncNumbers.add(n));
-                    }
-                }
-            });
-
-            const allPhones = extractPhoneNumbers(text).filter(n => !globalDncNumbers.has(n));
-
+            const allPhones = extractPhoneNumbers(text);
             if (allPhones.length === 0 && allEmails.length === 0) return [];
-
-            return [{
-                name: firstName || 'EXTRACTED DATA',
-                numbers: [...new Set(allPhones)],
-                emails: [...new Set(allEmails)],
-                addresses: [...new Set(allAddresses)]
-            }];
+            return [{ name: firstName || 'EXTRACTED DATA', numbers: [...new Set(allPhones)], emails: [...new Set(allEmails)], addresses: [...new Set(allAddresses)] }];
         }
 
         const lookupFileInput = document.getElementById('lookupFileInput');
-        const lookupUploadArea = document.getElementById('lookupUploadArea');
-
-        lookupUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); lookupUploadArea.classList.add('dragover'); });
-        lookupUploadArea.addEventListener('dragleave', () => { lookupUploadArea.classList.remove('dragover'); });
-        lookupUploadArea.addEventListener('drop', (e) => { 
-            e.preventDefault(); 
-            lookupUploadArea.classList.remove('dragover'); 
-            const files = Array.from(e.dataTransfer.files); 
-            if (files.length > 0) handleLookupFile(files[0]); 
-        });
-
-        lookupFileInput.addEventListener('change', (e) => { 
-            const files = Array.from(e.target.files); 
-            if (files.length > 0) handleLookupFile(files[0]); 
-        });
+        lookupFileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleLookupFile(e.target.files[0]); });
 
         function handleLookupFile(file) {
             const reader = new FileReader();
@@ -670,812 +495,270 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array', cellDates: true, raw: true });
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
                     if (json.length < 2) return showNotification('Lookup file is empty.', 'error');
-
-                    const headers = json[0].map(h => String(h).trim());
-                    
-                    let phoneIndex = -1;
-                    let existIndex = -1;
-
-                    headers.forEach((h, i) => {
-                        const cleanHeader = h.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        if (['phonenumber', 'phone', 'number', 'whatsappnumber', 'wanumber'].includes(cleanHeader)) {
-                            phoneIndex = i;
-                        }
-                        if (['exist', 'whatsapp', 'status', 'iswhatsapp', 'haswhatsapp', 'result'].includes(cleanHeader)) {
-                            existIndex = i;
+                    const headers = json[0].map(h => String(h).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+                    let pIdx = headers.findIndex(h => ['phonenumber', 'phone', 'number'].includes(h));
+                    let eIdx = headers.findIndex(h => ['exist', 'whatsapp', 'status', 'result'].includes(h));
+                    if (pIdx === -1 || eIdx === -1) return showNotification('Columns not found.', 'error');
+                    json.slice(1).forEach(row => {
+                        let n = String(row[pIdx]).replace(/[^\d]/g, '');
+                        if (n.length >= 10) {
+                            if (n.length > 10) n = n.slice(-10);
+                            const s = String(row[eIdx]).toLowerCase().trim();
+                            lookupResultsMap.set(n, ['1', 'yes', 'true', 'valid'].includes(s) ? 'yes' : 'no');
                         }
                     });
-
-                    if (phoneIndex === -1 || existIndex === -1) {
-                        return showNotification('لم أتمكن من العثور على أعمدة تحتوي على الأرقام وحالة الواتساب.', 'error');
-                    }
-
-                    const dataRows = json.slice(1);
-                    const processedData = dataRows.map(row => ({ 
-                        phoneNumber: row[phoneIndex], 
-                        exist: row[existIndex] 
-                    }));
-
-                    processLookupData(processedData);
-                } catch (error) {
-                    showNotification('Failed to process lookup file.', 'error');
-                }
+                    updateStats(); updateCleanedNumbers(); showNotification('Lookup Success!', 'success');
+                } catch (error) { showNotification('Failed to process Excel.', 'error'); }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function processLookupData(data) {
-            let loadedCount = 0;
-
-            data.forEach(row => {
-                if (row.phoneNumber !== undefined && row.exist !== undefined) {
-                    let cleanedNumber = String(row.phoneNumber).replace(/[^\d]/g, '');
-                    if (cleanedNumber.length >= 10) {
-                        if (cleanedNumber.length > 10) cleanedNumber = cleanedNumber.slice(-10);
-                        
-                        const existStatus = String(row.exist).toLowerCase().trim();
-                        let finalStatus = null;
-                        
-                        if (['1', 'yes', 'true', 'valid', 'active', 'found'].includes(existStatus)) {
-                            finalStatus = 'yes';
-                        } else if (['0', 'no', 'false', 'invalid', 'inactive', 'notfound', 'not found'].includes(existStatus)) {
-                            finalStatus = 'no';
-                        }
-
-                        if (finalStatus === 'yes' || finalStatus === 'no') {
-                            lookupResultsMap.set(cleanedNumber, finalStatus);
-                            loadedCount++;
-                        }
-                    }
-                }
-            });
-
-            updateStats();
-            updateCleanedNumbers();
-
-            if (loadedCount > 0) showNotification(`Loaded ${loadedCount} lookup entries successfully!`, 'success');
-            else showNotification('No valid lookup entries found.', 'error');
-        }
-
-        function formatPhoneNumber(number) {
-            if (number.length === 10) {
-                return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
-            }
-            return number;
-        }
+        function formatPhoneNumber(number) { return number.length === 10 ? `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}` : number; }
 
         function updateStats() {
-            const totalNumbers = allNumbers.length;
-            const uniqueNumbers = new Set(allNumbers).size;
-
-            document.getElementById('totalCount').textContent = totalNumbers;
-            document.getElementById('uniqueCount').textContent = uniqueNumbers;
+            document.getElementById('totalCount').textContent = allNumbers.length;
+            document.getElementById('uniqueCount').textContent = new Set(allNumbers).size;
             document.getElementById('lookupCount').textContent = lookupResultsMap.size;
         }
 
         function updateCleanedNumbers() {
             const container = document.getElementById('cleanedNumbers');
-            
-            if (contacts.length === 0) {
-                container.innerHTML = '';
-                return;
-            }
-
+            if (contacts.length === 0) { container.innerHTML = ''; return; }
             const nameToDataMap = new Map();
-
             contacts.forEach(contact => {
-                if (!nameToDataMap.has(contact.name)) {
-                    nameToDataMap.set(contact.name, { numbers: [], emails: [], addresses: [] });
-                }
+                if (!nameToDataMap.has(contact.name)) nameToDataMap.set(contact.name, { numbers: [], emails: [], addresses: [] });
                 const entry = nameToDataMap.get(contact.name);
                 contact.numbers.forEach(n => { if (!entry.numbers.includes(n)) entry.numbers.push(n); });
                 [...new Set(contact.emails || [])].forEach(e => { if (!entry.emails.includes(e)) entry.emails.push(e); });
                 [...new Set(contact.addresses || [])].forEach(a => { if (!entry.addresses.includes(a)) entry.addresses.push(a); });
             });
-
             let html = '';
             nameToDataMap.forEach(({ numbers, emails, addresses }, name) => {
                 html += '<div class="contact-group" style="margin-bottom: 20px;">';
-                
-                html += `<div draggable="false"><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase; --inversion-type-color: simple;">${name}</span></div>`;
-
-                addresses.forEach(addr => {
-                    html += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">📍 ${addr}</span></div>`;
-                });
-
-                emails.forEach(email => {
-                    html += `<div draggable="false"><span style="color: rgb(51, 204, 255);">${email}</span></div>`;
-                });
-
+                html += `<div><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase;">${name}</span></div>`;
+                addresses.forEach(addr => { html += `<div><span style="color: rgb(255, 255, 0);">${addr}</span></div>`; });
+                emails.forEach(email => { html += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>`; });
                 numbers.forEach((number) => {
-                    const result = lookupResultsMap.get(number);
-                    let colorCode = 'rgb(255, 255, 255)'; 
-                    if (result === 'yes') {
-                        colorCode = 'rgb(24, 168, 65)'; // Exact Evernote Green
-                    } else if (result === 'no') {
-                        colorCode = 'rgb(252, 18, 51)'; // Exact Evernote Red
-                    }
-                    const protectedFormatted = `(${number.slice(0, 3)})&#8203; ${number.slice(3, 6)}-${number.slice(6)}`;
-                    html += `<div draggable="false"><span style="color: ${colorCode};">${protectedFormatted}</span></div>`;
+                    const res = lookupResultsMap.get(number);
+                    let color = 'rgb(255, 255, 255)';
+                    if (res === 'yes') color = 'rgb(24, 168, 65)'; else if (res === 'no') color = 'rgb(252, 18, 51)';
+                    const prot = `(${number.slice(0, 3)})&#8203; ${number.slice(3, 6)}-${number.slice(6)}`;
+                    html += `<div><span style="color: ${color};">${prot}</span></div>`;
                 });
-
                 html += '</div>';
             });
-
             container.innerHTML = html;
         }
 
         function updateAmericanNumbers() {
             const container = document.getElementById('americanNumbers');
-            const allUniqueNumbers = new Set();
-            contacts.forEach(c => c.numbers.forEach(n => allUniqueNumbers.add(n)));
-            const uniqueNumbersArray = Array.from(allUniqueNumbers);
-            
-            if (uniqueNumbersArray.length === 0) {
-                container.innerHTML = '';
-                return;
-            }
-
-            let html = '<div class="number-list" style="margin-bottom: 20px;">';
-            uniqueNumbersArray.forEach((number) => {
-                html += `<div draggable="false"><span>+1 ${formatPhoneNumber(number)}</span></div>`;
-            });
-            html += '</div>';
-
-            container.innerHTML = html;
+            const unique = Array.from(new Set(contacts.flatMap(c => c.numbers)));
+            if (unique.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = unique.map(n => `<div><span>+1 ${formatPhoneNumber(n)}</span></div>`).join('');
         }
 
         function updateDuplicateNumbers() {
             const container = document.getElementById('duplicateNumbers');
-
-            const numberCounts = new Map();
-            allNumbers.forEach(number => {
-                numberCounts.set(number, (numberCounts.get(number) || 0) + 1);
-            });
-
-            crossContactDuplicates.forEach((count, number) => {
-                const existing = numberCounts.get(number) || 1;
-                numberCounts.set(number, existing + (count - 1));
-            });
-
-            const duplicates = [...numberCounts.entries()].filter(([_, count]) => count > 1);
-
-            if (duplicates.length === 0) {
-                container.innerHTML = '';
-                return;
-            }
-
-            let html = '<div class="number-list" style="margin-bottom: 20px;">';
-            duplicates.forEach(([number, count]) => {
-                html += `<div draggable="false"><span style="display: inline-block; width: 150px;">${formatPhoneNumber(number)}</span><span style="color: var(--text-muted); font-size: 0.85rem;">${count} times</span></div>`;
-            });
-            html += '</div>';
-
-            container.innerHTML = html;
+            const counts = new Map();
+            allNumbers.forEach(n => counts.set(n, (counts.get(n) || 0) + 1));
+            const dups = [...counts.entries()].filter(([_, c]) => c > 1);
+            if (dups.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = dups.map(([n, c]) => `<div><span style="display: inline-block; width: 150px;">${formatPhoneNumber(n)}</span><span style="color: var(--text-muted); font-size: 0.85rem;">${c} times</span></div>`).join('');
         }
 
         function processText() {
-            const textInput = document.getElementById('textInput');
-            const text = textInput.value.trim();
-            
-            if (!text) {
-                showNotification('Please enter text to process', 'error');
-                return;
-            }
-
-            const newContacts = groupNumbersByNames(text);
-            
-            newContacts.forEach(contact => {
-                const existingContact = contacts.find(c => c.name === contact.name);
-                if (existingContact) {
-                    contact.numbers.forEach(n => {
-                        if (!existingContact.numbers.includes(n)) existingContact.numbers.push(n);
-                    });
-                    existingContact.emails = [...new Set([...(existingContact.emails || []), ...(contact.emails || [])])];
-                    existingContact.addresses = [...new Set([...(existingContact.addresses || []), ...(contact.addresses || [])])];
-                } else {
-                    contact.numbers = [...new Set(contact.numbers)];
-                    contacts.push(contact);
-                }
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) return showNotification('Enter text to process', 'error');
+            const newOnes = groupNumbersByNames(text);
+            newOnes.forEach(nc => {
+                const ex = contacts.find(c => c.name === nc.name);
+                if (ex) {
+                    nc.numbers.forEach(n => { if (!ex.numbers.includes(n)) ex.numbers.push(n); });
+                    ex.emails = [...new Set([...(ex.emails || []), ...(nc.emails || [])])];
+                    ex.addresses = [...new Set([...(ex.addresses || []), ...(nc.addresses || [])])];
+                } else contacts.push(nc);
             });
-
             allNumbers = contacts.flatMap(c => c.numbers);
             deduplicateContactsGlobally();
-
-            updateStats();
-            updateCleanedNumbers();
-            updateAmericanNumbers();
-            updateDuplicateNumbers();
-
-            showNotification('Data extracted successfully!', 'success');
+            updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
+            showNotification('Data processed successfully!', 'success');
         }
 
         function clearSession() {
-            allNumbers = [];
-            contacts = [];
-            crossContactDuplicates = new Map();
-            lookupResultsMap = new Map(); 
+            allNumbers = []; contacts = []; lookupResultsMap.clear();
             document.getElementById('textInput').value = '';
-            document.getElementById('lookupFileInput').value = '';
-            
-            updateStats();
-            updateCleanedNumbers();
-            updateAmericanNumbers();
-            updateDuplicateNumbers();
-            
-            showNotification('Session cleared completely!', 'success');
+            updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
+            showNotification('Session cleared!', 'success');
         }
 
         function copyForWaChecker() {
-            const allUniqueNumbers = new Set();
-            contacts.forEach(c => c.numbers.forEach(n => allUniqueNumbers.add(n)));
-            const uniqueNumbersArray = Array.from(allUniqueNumbers);
-            
-            if (uniqueNumbersArray.length === 0) {
-                showNotification('لا توجد أرقام للنسخ', 'error');
-                return;
-            }
-
-            let plainText = uniqueNumbersArray.map(number => {
-                return `+1 ${formatPhoneNumber(number)}`;
-            }).join('\n');
-
-            const textArea = document.createElement("textarea");
-            textArea.value = plainText;
-            textArea.style.position = "fixed";
-            textArea.style.left = "-9999px";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showNotification('تم نسخ الأرقام بنجاح.', 'success');
-            } catch (err) {
-                showNotification('حدث خطأ أثناء النسخ', 'error');
-            }
-            document.body.removeChild(textArea);
+            const unique = Array.from(new Set(contacts.flatMap(c => c.numbers)));
+            if (unique.length === 0) return showNotification('No numbers to copy', 'error');
+            const text = unique.map(n => `+1 ${formatPhoneNumber(n)}`).join('\n');
+            const ta = document.createElement("textarea");
+            ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+            document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            showNotification('Numbers copied!', 'success');
         }
 
         function copyToClipboard(elementId) {
-            let cleanHtml = '<html><body><!--StartFragment-->';
+            let cleanHtml = '<html><body>';
             let plainText = '';
-
             if (elementId === 'cleanedNumbers') {
-                const nameToDataMap = new Map();
-                contacts.forEach(contact => {
-                    if (!nameToDataMap.has(contact.name)) {
-                        nameToDataMap.set(contact.name, { numbers: [], emails: [], addresses: [] });
-                    }
-                    const entry = nameToDataMap.get(contact.name);
-                    contact.numbers.forEach(n => { if (!entry.numbers.includes(n)) entry.numbers.push(n); });
-                    [...new Set(contact.emails || [])].forEach(e => { if (!entry.emails.includes(e)) entry.emails.push(e); });
-                    [...new Set(contact.addresses || [])].forEach(a => { if (!entry.addresses.includes(a)) entry.addresses.push(a); });
+                const map = new Map();
+                contacts.forEach(c => {
+                    if (!map.has(c.name)) map.set(c.name, { n: [], e: [], a: [] });
+                    const entry = map.get(c.name);
+                    c.numbers.forEach(num => { if (!entry.n.includes(num)) entry.n.push(num); });
+                    (c.emails || []).forEach(em => { if (!entry.e.includes(em)) entry.e.push(em); });
+                    (c.addresses || []).forEach(ad => { if (!entry.a.includes(ad)) entry.a.push(ad); });
                 });
-
-                let isFirst = true;
-
-                nameToDataMap.forEach(({ numbers, emails, addresses }, name) => {
-                    let dataPm = isFirst ? 'data-pm-slice="1 1 []" data-en-clipboard="true"' : '';
-                    isFirst = false;
-
-                    cleanHtml += `<div draggable="false" ${dataPm}><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase; --inversion-type-color: simple;">${name}</span></div>\n`;
+                map.forEach(({ n, e, a }, name) => {
+                    cleanHtml += `<div><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase;">${name}</span></div>\n`;
                     plainText += name + '\n';
-
-                    addresses.forEach(addr => {
-                        cleanHtml += `<div draggable="false"><span style="color: rgb(255, 255, 0); --inversion-type-color: simple;">📍 ${addr}</span></div>\n`;
-                        plainText += addr + '\n';
+                    a.forEach(addr => { cleanHtml += `<div><span style="color: rgb(255, 255, 0);">${addr}</span></div>\n`; plainText += addr + '\n'; });
+                    e.forEach(email => { cleanHtml += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>\n`; plainText += email + '\n'; });
+                    n.forEach(num => {
+                        const res = lookupResultsMap.get(num);
+                        const color = res === 'yes' ? 'rgb(24, 168, 65)' : (res === 'no' ? 'rgb(252, 18, 51)' : 'rgb(255, 255, 255)');
+                        const prot = `(${num.slice(0, 3)})&#8203; ${num.slice(3, 6)}-${num.slice(6)}`;
+                        cleanHtml += `<div><span style="color: ${color};">${prot}</span></div>\n`;
+                        plainText += formatPhoneNumber(num) + '\n';
                     });
-
-                    emails.forEach(email => {
-                        cleanHtml += `<div draggable="false"><span style="color: rgb(51, 204, 255); text-decoration: none; --inversion-type-color: simple;">${email}</span></div>\n`;
-                        plainText += email + '\n';
-                    });
-
-                    numbers.forEach((number) => {
-                        const formatted = formatPhoneNumber(number);
-                        const result = lookupResultsMap.get(number);
-                        let colorCode = 'rgb(255, 255, 255)'; 
-                        if (result === 'yes') {
-                            colorCode = 'rgb(24, 168, 65)'; // Exact Evernote Green
-                        } else if (result === 'no') {
-                            colorCode = 'rgb(252, 18, 51)'; // Exact Evernote Red
-                        }
-                        
-                        cleanHtml += `<div draggable="false"><span style="color: ${colorCode}; --inversion-type-color: simple;">${formatted}</span></div>\n`;
-                        plainText += formatted + '\n';
-                    });
-
-                    cleanHtml += '<div draggable="false"><br></div>\n';
-                    plainText += '\n';
+                    cleanHtml += '<div><br></div>\n'; plainText += '\n';
                 });
-
             } else {
-                const element = document.getElementById(elementId);
-                plainText = element.innerText;
-                const lines = plainText.split('\n');
-                lines.forEach((line, index) => {
-                    let dataPm = index === 0 ? 'data-pm-slice="1 1 []" data-en-clipboard="true"' : '';
-                    cleanHtml += `<div draggable="false" ${dataPm}><span style="--inversion-type-color: simple;">${line}</span></div>\n`;
-                });
+                plainText = document.getElementById(elementId).innerText;
+                plainText.split('\n').forEach(line => cleanHtml += `<div><span>${line}</span></div>\n`);
             }
-
-            cleanHtml += '<!--EndFragment--></body></html>';
-
-            const dummyDiv = document.createElement('div');
-            dummyDiv.textContent = 'dummy text for copy';
-            dummyDiv.style.position = 'absolute';
-            dummyDiv.style.left = '-9999px';
-            document.body.appendChild(dummyDiv);
-
-            const selection = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(dummyDiv);
-            selection.removeAllRanges();
-            selection.addRange(range);
-
-            const copyListener = function(e) {
-                e.preventDefault();
-                e.clipboardData.setData('text/html', cleanHtml);
-                e.clipboardData.setData('text/plain', plainText);
+            cleanHtml += '</body></html>';
+            const dummy = document.createElement('div');
+            dummy.textContent = 'dummy'; dummy.style.position = 'absolute'; dummy.style.left = '-9999px';
+            document.body.appendChild(dummy);
+            const sel = window.getSelection(); const range = document.createRange();
+            range.selectNodeContents(dummy); sel.removeAllRanges(); sel.addRange(sel);
+            const listener = (event) => {
+                event.preventDefault();
+                event.clipboardData.setData('text/html', cleanHtml);
+                event.clipboardData.setData('text/plain', plainText.replace(/\n{3,}/g, '\n\n').trim());
             };
-
-            document.addEventListener('copy', copyListener);
-            
-            try {
-                const successful = document.execCommand('copy');
-                if(successful) {
-                    showNotification('Copied perfectly for Evernote!', 'success');
-                } else {
-                    showNotification('Copy failed by browser', 'error');
-                }
-            } catch (err) {
-                showNotification('Copy Error!', 'error');
-            } finally {
-                document.removeEventListener('copy', copyListener);
-                selection.removeAllRanges();
-                document.body.removeChild(dummyDiv);
-            }
+            document.addEventListener('copy', listener); document.execCommand('copy');
+            document.removeEventListener('copy', listener); sel.removeAllRanges(); document.body.removeChild(dummy);
+            showNotification('Copied perfectly!', 'success');
         }
 
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => notification.classList.add('show'), 100);
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => document.body.removeChild(notification), 300);
-            }, 3000);
+        function showNotification(m, t) {
+            const n = document.createElement('div'); n.className = `notification ${t}`; n.textContent = m;
+            document.body.appendChild(n); setTimeout(() => n.classList.add('show'), 100);
+            setTimeout(() => { n.classList.remove('show'); setTimeout(() => n.remove(), 300); }, 3000);
         }
 
         async function pasteFromClipboard() {
             try {
                 const items = await navigator.clipboard.read();
                 const blobs = [];
-                for (const item of items) {
-                    for (const t of item.types) {
-                        if (t.startsWith('image/')) {
-                            blobs.push(new File([await item.getType(t)], 'paste.png', { type: t }));
-                        }
-                    }
-                }
-                if (blobs.length > 0) {
-                    handleFiles(blobs);
-                } else {
-                    const text = await navigator.clipboard.readText();
-                    if (text) {
-                        const textInput = document.getElementById('textInput');
-                        textInput.value += (textInput.value ? '\n\n' : '') + text;
-                        showNotification('Text pasted from clipboard!', 'success');
-                    }
-                }
-            } catch (error) {
-                showNotification('Press Ctrl+V to paste', 'error');
-            }
+                for (const item of items) { for (const t of item.types) { if (t.startsWith('image/')) blobs.push(new File([await item.getType(t)], 'p.png', { type: t })); } }
+                if (blobs.length > 0) handleFiles(blobs);
+                else { const t = await navigator.clipboard.readText(); if (t) { document.getElementById('textInput').value += (document.getElementById('textInput').value ? '\n\n' : '') + t; showNotification('Text pasted!', 'success'); } }
+            } catch (e) { showNotification('Use Ctrl+V', 'error'); }
         }
 
         document.addEventListener("paste", async (e) => {
-            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable) return;
-            const items = Array.from(e.clipboardData.items);
-            const imageItems = items.filter(item => item.type.startsWith("image/"));
-            if (imageItems.length === 0) return;
-            e.preventDefault();
-            const files = imageItems.map(item => item.getAsFile()).filter(Boolean);
-            if (files.length > 0) {
-                showNotification("📋 Processing image...", "success");
-                await handleFiles(files);
-            }
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+            const items = Array.from(e.clipboardData.items).filter(i => i.type.startsWith("image/"));
+            if (items.length > 0) { e.preventDefault(); handleFiles(items.map(i => i.getAsFile())); }
         });
 
-        function handleModelChange(val) {
-            saveModelSelection(val);
-            updateApiUI();
-        }
-
-        function updateApiUI() {
-            const model = document.getElementById('aiModelSelect').value;
-            const label = document.getElementById('apiKeyLabel');
-            const input = document.getElementById('geminiApiKey');
-            const status = document.getElementById('geminiStatus');
-            
-            if (model.startsWith('glm')) {
-                label.innerHTML = '🔑 GLM API Key <span style="color:var(--accent-red);">(Required for GLM OCR)</span>';
-                input.placeholder = model === 'glm-modal' ? "Enter Modal Token..." : "Enter Zhipu AI Key...";
-                const key = localStorage.getItem('glmApiKey') || '';
-                input.value = key;
-                status.textContent = key ? '✅ Key saved' : '⬜ Not set';
-                status.style.color = key ? 'var(--success-green)' : '';
-            } else {
-                label.innerHTML = '🔑 Gemini API Key <span style="color:var(--accent-red);">(Required for AI OCR)</span>';
-                input.placeholder = "Enter Gemini API key...";
-                const key = localStorage.getItem('geminiApiKey') || '';
-                input.value = key;
-                status.textContent = key ? '✅ Key saved' : '⬜ Not set';
-                status.style.color = key ? 'var(--success-green)' : '';
-            }
-        }
-
-        function saveApiKey(val) {
-            val = val.trim();
-            const model = document.getElementById('aiModelSelect').value;
-            const storageKey = model.startsWith('glm') ? 'glmApiKey' : 'geminiApiKey';
-            
-            if (val) {
-                localStorage.setItem(storageKey, val);
-                document.getElementById('geminiStatus').textContent = '✅ Key saved';
-                document.getElementById('geminiStatus').style.color = 'var(--success-green)';
-            } else {
-                localStorage.removeItem(storageKey);
-                document.getElementById('geminiStatus').textContent = '⬜ Not set';
-                document.getElementById('geminiStatus').style.color = '';
-            }
-        }
-
-        function loadGeminiKey() {
-            updateApiUI();
-        }
-
-        function saveModelSelection(val) {
-            localStorage.setItem('aiModelSelection', val);
-        }
-
-        function loadModelSelection() {
-            const model = localStorage.getItem('aiModelSelection') || 'gemini-2.0-flash';
-            const select = document.getElementById('aiModelSelect');
-            if(select) {
-                select.value = model;
-                updateApiUI();
-            }
-            return model;
-        }
+        function saveGeminiKey(v) { v = v.trim(); if (v) { localStorage.setItem('geminiApiKey', v); document.getElementById('geminiStatus').textContent = '✅ Key saved'; document.getElementById('geminiStatus').style.color = 'var(--success-green)'; } else { localStorage.removeItem('geminiApiKey'); document.getElementById('geminiStatus').textContent = '⬜ Not set'; document.getElementById('geminiStatus').style.color = ''; } }
+        function loadGeminiKey() { const k = localStorage.getItem('geminiApiKey') || ''; if (k) { document.getElementById('geminiApiKey').value = k; document.getElementById('geminiStatus').textContent = '✅ Key saved'; document.getElementById('geminiStatus').style.color = 'var(--success-green)'; } return k; }
+        function saveModelSelection(v) { localStorage.setItem('aiModelSelection', v); }
+        function loadModelSelection() { const m = localStorage.getItem('aiModelSelection') || 'gemini-2.0-flash'; document.getElementById('aiModelSelect').value = m; return m; }
 
         async function testApiKey() {
-            const apiKey = document.getElementById('geminiApiKey').value.trim();
-            const model = document.getElementById('aiModelSelect').value;
-            
-            if (!apiKey) {
-                showNotification('يرجى إدخال مفتاح API أولاً', 'error');
-                return;
-            }
-            
-            showNotification('جاري فحص المفتاح...', 'success');
+            const k = document.getElementById('geminiApiKey').value.trim();
+            if (!k) return showNotification('Enter API Key', 'error');
+            showNotification('Testing Key...', 'success');
             try {
-                if (model.startsWith('glm')) {
-                    const apiUrl = model === 'glm-modal' 
-                        ? 'https://api.us-west-2.modal.direct/v1/chat/completions' 
-                        : 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-                    const testModel = model === 'glm-modal' ? 'zai-org/GLM-5.1-FP8' : 'glm-4';
-
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 
-                            'Authorization': `Bearer ${apiKey}`, 
-                            'Content-Type': 'application/json' 
-                        },
-                        body: JSON.stringify({ 
-                            model: testModel, 
-                            messages: [{role: "user", content: "hi"}],
-                            max_tokens: 5
-                        })
-                    });
-                    
-                    if (!response.ok) throw new Error("Invalid GLM API Key or Unauthorized");
-                    
-                    const debugPanel = document.getElementById('debugPanel');
-                    const debugOutput = document.getElementById('debugOutput');
-                    debugOutput.value = `🎉 مفتاح GLM يعمل بنجاح!\n\n🤖 نموذج ${testModel} جاهز للاستخدام في الـ OCR.`;
-                    debugPanel.style.display = 'block';
-                    showNotification('تم تفعيل محرك GLM بنجاح!', 'success');
-                    
-                } else {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-                    if (!response.ok) {
-                        const err = await response.json().catch(() => ({}));
-                        throw new Error(err.error?.message || `HTTP Error ${response.status}`);
-                    }
-                    const data = await response.json();
-                    
-                    const modelSelect = document.getElementById('aiModelSelect');
-                    const currentSelection = modelSelect.value;
-                    
-                    const availableModels = data.models
-                        .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
-                        .map(m => m.name.replace('models/', ''));
-
-                    const debugPanel = document.getElementById('debugPanel');
-                    const debugOutput = document.getElementById('debugOutput');
-                    
-                    debugOutput.value = "🎉 المفتاح يعمل بنجاح!\n\n🤖 الموديلات المتاحة للاستخدام مع هذا المفتاح:\n\n" + availableModels.join('\n\n');
-                    debugPanel.style.display = 'block';
-                    
-                    showNotification('المفتاح سليم! راجع قائمة الموديلات بالأسفل.', 'success');
-                }
-            } catch (error) {
-                showNotification('خطأ في المفتاح: ' + error.message, 'error');
-                const debugPanel = document.getElementById('debugPanel');
-                const debugOutput = document.getElementById('debugOutput');
-                debugOutput.value = "❌ فشل الاتصال:\n" + error.message;
-                debugPanel.style.display = 'block';
-            }
-        }
-
-        async function ocrWithAI(file) {
-            const apiKeyInput = document.getElementById('geminiApiKey').value.trim();
-            const selectedModel = document.getElementById('aiModelSelect').value;
-
-            if (!apiKeyInput) {
-                throw new Error("API Key is required to use AI models.");
-            }
-            
-            const apiKey = apiKeyInput;
-            let modelEndpoint = selectedModel;
-
-            const base64 = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-
-            const mimeType = file.type || 'image/png';
-            const prompt = `You are a highly precise OCR engine. Extract ALL contact information from this image EXACTLY as it appears, but apply the following rules:
-- Preserve names, phone numbers, emails, and addresses faithfully.
-- CRITICAL: Double-check all phone digits carefully. Do not confuse 9 with 0, or 8 with 6.
-- CRITICAL: ABSOLUTELY DO NOT include section headers like "Phone Information", "Contact Info", "Numbers", "Details" in the output. Ignore them completely.
-- Ignore timestamps like EDT, EST, PST.
-- Output only the raw extracted text with no commentary, no markdown.
-- Separate logical sections with blank lines.`;
-
-            if (modelEndpoint.startsWith('glm')) {
-                const glmUrl = modelEndpoint === 'glm-modal' 
-                    ? 'https://api.us-west-2.modal.direct/v1/chat/completions'
-                    : 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-                const glmModel = modelEndpoint === 'glm-modal' ? 'zai-org/GLM-5.1-FP8' : 'glm-4v';
-
-                const glmBody = {
-                    model: glmModel,
-                    messages: [
-                        {
-                            role: "user",
-                            content: [
-                                { type: "text", text: prompt },
-                                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } }
-                            ]
-                        }
-                    ],
-                    temperature: 0.1,
-                    max_tokens: 2000
-                };
-
-                const res = await fetch(glmUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify(glmBody)
-                });
-
-                if (!res.ok) {
-                    const errObj = await res.json().catch(() => ({}));
-                    throw new Error(errObj.error?.message || `GLM API Error: ${res.status}`);
-                }
-
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${k}`);
+                if (!res.ok) throw new Error('Invalid Key');
                 const data = await res.json();
-                let extractedText = data.choices?.[0]?.message?.content || '';
-                
-                const backtick = String.fromCharCode(96);
-                const regexMarkdown = new RegExp(`${backtick}{3}[a-zA-Z]*\\n?`, 'g');
-                extractedText = extractedText.replace(regexMarkdown, '').replace(new RegExp(`${backtick}{3}`, 'g'), '').trim();
-                
-                return extractedText;
-            }
-
-            const body = {
-                contents: [{
-                    parts: [
-                        { inline_data: { mime_type: mimeType, data: base64 } },
-                        { text: prompt }
-                    ]
-                }],
-                generationConfig: { temperature: 0 }
-            };
-
-            let currentUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${apiKey}`;
-            let delayMs = 4000;
-
-            for (let attempt = 0; attempt <= 4; attempt++) {
-                const res = await fetch(currentUrl, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(body) 
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    let extractedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                    
-                    const backtick = String.fromCharCode(96);
-                    const regexMarkdown = new RegExp(`${backtick}{3}[a-zA-Z]*\\n?`, 'g');
-                    extractedText = extractedText.replace(regexMarkdown, '').replace(new RegExp(`${backtick}{3}`, 'g'), '').trim();
-                    
-                    return extractedText;
-                }
-
-                const errObj = await res.json().catch(() => ({}));
-                const errMsg = errObj.error?.message || `HTTP ${res.status}`;
-                const lowerErr = errMsg.toLowerCase();
-
-                if (res.status === 404 || lowerErr.includes("not found")) {
-                    throw new Error(`الموديل (${modelEndpoint}) غير مدعوم لمفتاحك. يرجى اختيار موديل آخر من القائمة.`);
-                }
-
-                if ((res.status === 429 || lowerErr.includes("quota")) && attempt < 4) {
-                    if (modelEndpoint.includes('pro')) {
-                        const progressText = document.getElementById('progressText');
-                        if (progressText) {
-                            progressText.textContent = `🚀 Pro model rate limit hit. Switching to Flash automatically...`;
-                        }
-                        modelEndpoint = "gemini-1.5-flash";
-                        currentUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${apiKey}`;
-                        attempt--; 
-                        continue;
-                    }
-
-                    let wait = delayMs;
-                    const match = errMsg.match(/retry in (\d+(\.\d+)?)s/i);
-                    if (match && match[1]) wait = Math.ceil(parseFloat(match[1]) * 1000) + 1500;
-                    
-                    const progressText = document.getElementById('progressText');
-                    if (progressText) {
-                        progressText.textContent = `⏳ API paused (Rate Limit). Retrying in ${Math.round(wait/1000)}s...`;
-                    }
-                    
-                    await new Promise(r => setTimeout(r, wait));
-                    delayMs *= 2;
-                    continue;
-                }
-                throw new Error(errMsg);
-            }
-            throw new Error('Failed to get OCR response after retries');
+                const ms = data.models.filter(m => m.supportedGenerationMethods.includes('generateContent')).map(m => m.name.replace('models/', ''));
+                const sel = document.getElementById('aiModelSelect'); sel.innerHTML = '';
+                ms.forEach(id => { const o = document.createElement('option'); o.value = id; o.textContent = `🤖 ${id}`; o.style.background = '#1e1e1e'; sel.appendChild(o); });
+                const best = ms.find(m => m.includes('2.5-flash')) || ms.find(m => m.includes('2.0-flash')) || ms[0];
+                if (best) { sel.value = best; saveModelSelection(best); }
+                document.getElementById('debugOutput').value = "🎉 Success!\n\nModels:\n" + ms.join('\n');
+                document.getElementById('debugPanel').style.display = 'block';
+                showNotification('Key tested and models updated!', 'success');
+            } catch (e) { showNotification('Key Error: ' + e.message, 'error'); }
         }
 
-        async function handleFiles(files) {
-            if (files.length === 0) return;
+        async function ocrWithAI(f) {
+            const k = document.getElementById('geminiApiKey').value.trim();
+            const m = document.getElementById('aiModelSelect').value;
+            if (!k) throw new Error("Key Required");
+            const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result.split(',')[1]); rd.readAsDataURL(f); });
+            const p = `Extract contact info. No headers, no markdown, no timestamps. Double check digits.`;
+            const body = { contents: [{ parts: [{ inline_data: { mime_type: f.type, data: b64 } }, { text: p }] }] };
+            let url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
+            const res = await fetch(url, { method: 'POST', body: JSON.stringify(body) });
+            if (!res.ok) throw new Error('API Error');
+            const data = await res.json();
+            let txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const bt = String.fromCharCode(96);
+            return txt.replace(new RegExp(`${bt}{3}[a-zA-Z]*\\n?`, 'g'), '').replace(new RegExp(`${bt}{3}`, 'g'), '').trim();
+        }
 
-            const progressContainer = document.getElementById('progressContainer');
-            const progressFill = document.getElementById('progressFill');
-            const progressText = document.getElementById('progressText');
-
-            progressContainer.style.display = 'block';
-            progressFill.style.width = '0%';
-            progressText.textContent = 'Processing images...';
-
+        async function handleFiles(fs) {
+            if (fs.length === 0) return;
+            const pc = document.getElementById('progressContainer'); const pf = document.getElementById('progressFill'); const pt = document.getElementById('progressText');
+            pc.style.display = 'block'; pf.style.width = '0%'; pt.textContent = 'Processing...';
             try {
-                let allExtractedText = '';
-                const apiKeyInput = document.getElementById('geminiApiKey').value.trim();
-
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    const fileLabel = file.name || `image ${i + 1}`;
-
-                    if (apiKeyInput && file.type && file.type.startsWith('image/')) {
-                        progressText.textContent = `🤖 Extracting via AI: ${fileLabel}...`;
-                        progressFill.style.width = Math.round(((i + 0.3) / files.length) * 100) + '%';
-                        try {
-                            const text = await ocrWithAI(file);
-                            allExtractedText += text + '\n\n';
-                            progressFill.style.width = Math.round(((i + 1) / files.length) * 100) + '%';
-                        } catch (aiErr) {
-                            const isModelError = aiErr.message.includes('not found') || aiErr.message.includes('مدعوم') || aiErr.message.includes('GLM API Error');
-                            const errorMsg = isModelError ? 
-                                `⚠️ مفتاح أو موديل غير صالح. يرجى الضغط على زر 🧪 للفحص.` : 
-                                `⚠️ فشل الـ AI (${aiErr.message}). سيتم استخدام المحرك الأساسي...`;
-                            
-                            showNotification(errorMsg, 'error');
-                            const processed = await preprocessImage(file);
-                            const result = await Tesseract.recognize(processed, 'eng');
-                            allExtractedText += result.data.text + '\n\n';
-                        }
-                    } else if (!apiKeyInput && file.type && file.type.startsWith('image/')) {
-                        showNotification(`⚠️ API Key is missing. Using basic OCR...`, 'error');
-                        progressText.textContent = `Processing ${fileLabel}...`;
-                        const processed = await preprocessImage(file);
-                        const result = await Tesseract.recognize(processed, 'eng');
-                        allExtractedText += result.data.text + '\n\n';
-                    } else {
-                        progressText.textContent = `Processing ${fileLabel}...`;
-                        const result = await Tesseract.recognize(file, 'eng');
-                        allExtractedText += result.data.text + '\n\n';
-                    }
-                    
-                    if (i < files.length - 1 && apiKeyInput) {
-                        progressText.textContent = `⏳ Cooling down (4s) to prevent API limits...`;
-                        await new Promise(r => setTimeout(r, 4000));
-                    }
+                let allT = ''; const key = loadGeminiKey();
+                for (let i = 0; i < fs.length; i++) {
+                    pt.textContent = `🤖 Processing: ${fs[i].name || i+1}...`;
+                    try { const t = await ocrWithAI(fs[i]); allT += t + '\n\n'; }
+                    catch (e) { const p = await preprocessImage(fs[i]); const r = await Tesseract.recognize(p, 'eng'); allT += r.data.text + '\n\n'; }
+                    pf.style.width = ((i+1)/fs.length)*100 + '%';
+                    if (i < fs.length - 1 && key) await new Promise(r => setTimeout(r, 4000));
                 }
-
-                progressFill.style.width = '100%';
-                progressText.textContent = `Processing completed!`;
-
-                const debugPanel = document.getElementById('debugPanel');
-                const debugOutput = document.getElementById('debugOutput');
-                debugOutput.value = allExtractedText;
-                debugPanel.style.display = 'block';
-                
-                processExtractedText(allExtractedText);
-                setTimeout(() => { progressContainer.style.display = 'none'; }, 2000);
-                showNotification('Image processed successfully!', 'success');
-                
-            } catch (error) {
-                progressContainer.style.display = 'none';
-                showNotification('Image processing failed.', 'error');
-            }
+                document.getElementById('debugOutput').value = allT; document.getElementById('debugPanel').style.display = 'block';
+                processExtractedText(allT); setTimeout(() => pc.style.display = 'none', 2000);
+                showNotification('Processed successfully!', 'success');
+            } catch (e) { pc.style.display = 'none'; showNotification('Failed.', 'error'); }
         }
 
-        function processExtractedText(text) {
-            const textInput = document.getElementById('textInput');
-            textInput.value += (textInput.value ? '\n\n' : '') + text;
+        async function preprocessImage(f) {
+            return new Promise(r => {
+                const i = new Image(); const u = URL.createObjectURL(f);
+                i.onload = () => {
+                    const s = 6; const c = document.createElement('canvas'); c.width = i.naturalWidth * s; c.height = i.naturalHeight * s;
+                    const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.drawImage(i, 0, 0, c.width, c.height);
+                    const id = ctx.getImageData(0, 0, c.width, c.height); const d = id.data;
+                    for (let j = 0; j < d.length; j += 4) { const g = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2]; d[j] = d[j+1] = d[j+2] = g; }
+                    ctx.putImageData(id, 0, 0); const sc = document.createElement('canvas'); sc.width = c.width; sc.height = c.height;
+                    const sctx = sc.getContext('2d'); sctx.filter = 'contrast(1.2)'; sctx.drawImage(c, 0, 0);
+                    URL.revokeObjectURL(u); sc.toBlob(b => r(b || f), 'image/png');
+                }; i.src = u;
+            });
+        }
 
-            const imageContacts = groupNumbersByNamesFromImage(text);
-
-            if (imageContacts.length > 0) {
-                imageContacts.forEach(contact => {
-                    const existingContact = contacts.find(c => c.name === contact.name);
-                    if (existingContact) {
-                        contact.numbers.forEach(n => {
-                            if (!existingContact.numbers.includes(n)) existingContact.numbers.push(n);
-                        });
-                        existingContact.emails = [...new Set([...(existingContact.emails || []), ...(contact.emails || [])])];
-                        existingContact.addresses = [...new Set([...(existingContact.addresses || []), ...(contact.addresses || [])])];
-                    } else {
-                        contact.numbers = [...new Set(contact.numbers)];
-                        contacts.push(contact);
-                    }
+        function processExtractedText(t) {
+            document.getElementById('textInput').value += (document.getElementById('textInput').value ? '\n\n' : '') + t;
+            const ics = groupNumbersByNamesFromImage(t);
+            if (ics.length) {
+                ics.forEach(nc => {
+                    const ex = contacts.find(c => c.name === nc.name);
+                    if (ex) { nc.numbers.forEach(n => { if (!ex.numbers.includes(n)) ex.numbers.push(n); }); ex.emails = [...new Set([...(ex.emails || []), ...(nc.emails || [])])]; ex.addresses = [...new Set([...(ex.addresses || []), ...(nc.addresses || [])])]; }
+                    else contacts.push(nc);
                 });
-
-                allNumbers = contacts.flatMap(c => c.numbers);
-                deduplicateContactsGlobally();
-
-                updateStats();
-                updateCleanedNumbers();
-                updateAmericanNumbers();
-                updateDuplicateNumbers();
-            } else {
-                processText();
-            }
+                deduplicateContactsGlobally(); updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
+            } else processText();
         }
 
-        // Initialize Settings
-        loadModelSelection();
-
+        loadGeminiKey(); setTimeout(loadModelSelection, 100);
     </script>
 </body>
 </html>
