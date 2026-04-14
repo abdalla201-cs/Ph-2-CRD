@@ -266,7 +266,7 @@
                     </div>
                 </div>
 
-                <div class="upload-area" id="uploadArea">
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
                     <p style="color: var(--text-muted); font-size: 0.85rem;">Drag images here or click to browse</p>
                     <input type="file" id="fileInput" class="file-input" multiple accept="image/*,.pdf">
                 </div>
@@ -301,7 +301,7 @@
                     
                     <input type="file" id="lookupFileInput" class="file-input" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                     <div class="upload-area" id="lookupUploadArea" style="min-height: 50px; padding: 10px; margin-bottom: 0;" onclick="document.getElementById('lookupFileInput').click()">
-                        <p style="font-size: 0.8rem; color: var(--text-muted);">📂 Drop WA Checker Excel</p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); pointer-events: none;">📂 Drop WA Checker Excel</p>
                     </div>
                 </div>
 
@@ -357,6 +357,54 @@
         let contacts = [];
         let lookupResultsMap = new Map();
         let crossContactDuplicates = new Map();
+
+        // ─── DRAG AND DROP LOGIC (FIXED) ───
+        function setupDragAndDrop(elementId, fileInputId, callback) {
+            const dropArea = document.getElementById(elementId);
+            const fileInput = document.getElementById(fileInputId);
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false);
+            });
+
+            dropArea.addEventListener('drop', (e) => {
+                let dt = e.dataTransfer;
+                let files = dt.files;
+                if (files && files.length > 0) {
+                    fileInput.files = files; // Update hidden input
+                    if (callback) callback(files);
+                }
+            }, false);
+            
+            // Handle manual click upload
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0 && callback) callback(e.target.files);
+            });
+        }
+
+        // Initialize drag and drop for Excel file
+        setupDragAndDrop('lookupUploadArea', 'lookupFileInput', (files) => {
+            handleLookupFile(files[0]);
+        });
+
+        // Initialize drag and drop for Image files
+        setupDragAndDrop('uploadArea', 'fileInput', (files) => {
+            handleFiles(files);
+        });
+        // ────────────────────────────────────
 
         function deduplicateContactsGlobally() {
             const globalSeen = new Set();
@@ -486,10 +534,8 @@
             return [{ name: firstName || 'EXTRACTED DATA', numbers: [...new Set(allPhones)], emails: [...new Set(allEmails)], addresses: [...new Set(allAddresses)] }];
         }
 
-        const lookupFileInput = document.getElementById('lookupFileInput');
-        lookupFileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleLookupFile(e.target.files[0]); });
-
         function handleLookupFile(file) {
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -637,15 +683,25 @@
             const dummy = document.createElement('div');
             dummy.textContent = 'dummy'; dummy.style.position = 'absolute'; dummy.style.left = '-9999px';
             document.body.appendChild(dummy);
-            const sel = window.getSelection(); const range = document.createRange();
-            range.selectNodeContents(dummy); sel.removeAllRanges(); sel.addRange(sel);
+            
+            const sel = window.getSelection(); 
+            const range = document.createRange();
+            range.selectNodeContents(dummy); 
+            sel.removeAllRanges(); 
+            
+            // BUG FIX: changed sel.addRange(sel) to sel.addRange(range)
+            sel.addRange(range); 
+            
             const listener = (event) => {
                 event.preventDefault();
                 event.clipboardData.setData('text/html', cleanHtml);
                 event.clipboardData.setData('text/plain', plainText.replace(/\n{3,}/g, '\n\n').trim());
             };
-            document.addEventListener('copy', listener); document.execCommand('copy');
-            document.removeEventListener('copy', listener); sel.removeAllRanges(); document.body.removeChild(dummy);
+            document.addEventListener('copy', listener); 
+            document.execCommand('copy');
+            document.removeEventListener('copy', listener); 
+            sel.removeAllRanges(); 
+            document.body.removeChild(dummy);
             showNotification('Copied perfectly!', 'success');
         }
 
