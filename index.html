@@ -358,7 +358,7 @@
         let lookupResultsMap = new Map();
         let crossContactDuplicates = new Map();
 
-        // ─── DRAG AND DROP LOGIC (FIXED) ───
+        // ─── DRAG AND DROP LOGIC ───
         function setupDragAndDrop(elementId, fileInputId, callback) {
             const dropArea = document.getElementById(elementId);
             const fileInput = document.getElementById(fileInputId);
@@ -689,7 +689,6 @@
             range.selectNodeContents(dummy); 
             sel.removeAllRanges(); 
             
-            // BUG FIX: changed sel.addRange(sel) to sel.addRange(range)
             sel.addRange(range); 
             
             const listener = (event) => {
@@ -756,7 +755,15 @@
             const m = document.getElementById('aiModelSelect').value;
             if (!k) throw new Error("Key Required");
             const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result.split(',')[1]); rd.readAsDataURL(f); });
-            const p = `Extract contact info. No headers, no markdown, no timestamps. Double check digits.`;
+            
+            // ── FIXED AI PROMPT: Zero-Tolerance Instructions ──
+            const p = `Extract all phone numbers and contact names from the image with 100% precision. 
+CRITICAL RULES:
+1. Ensure HIGH ACCURACY for digits. Pay strict attention to visually similar numbers (e.g., distinguishing 9 from 0, 8 from 6, 8 from 2).
+2. DO NOT SKIP ANY LINES. Extract every single phone number visible in the list.
+3. Ignore dates, timestamps, and timezones (e.g., EDT, PDT, Apr 13, Mar 14).
+4. Output raw text only. Do not format with markdown (\`\`\`).`;
+            
             const body = { contents: [{ parts: [{ inline_data: { mime_type: f.type, data: b64 } }, { text: p }] }] };
             let url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
             const res = await fetch(url, { method: 'POST', body: JSON.stringify(body) });
@@ -790,12 +797,16 @@
             return new Promise(r => {
                 const i = new Image(); const u = URL.createObjectURL(f);
                 i.onload = () => {
-                    const s = 6; const c = document.createElement('canvas'); c.width = i.naturalWidth * s; c.height = i.naturalHeight * s;
+                    // ── FIXED TESSERACT PREPROCESSING ──
+                    const s = 2.5; // Changed from 6 to 2.5 to avoid pixelation
+                    const c = document.createElement('canvas'); c.width = i.naturalWidth * s; c.height = i.naturalHeight * s;
                     const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.drawImage(i, 0, 0, c.width, c.height);
                     const id = ctx.getImageData(0, 0, c.width, c.height); const d = id.data;
                     for (let j = 0; j < d.length; j += 4) { const g = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2]; d[j] = d[j+1] = d[j+2] = g; }
                     ctx.putImageData(id, 0, 0); const sc = document.createElement('canvas'); sc.width = c.width; sc.height = c.height;
-                    const sctx = sc.getContext('2d'); sctx.filter = 'contrast(1.2)'; sctx.drawImage(c, 0, 0);
+                    const sctx = sc.getContext('2d'); 
+                    sctx.filter = 'contrast(1.5) brightness(1.1)'; // Better contrast for light background / blue text
+                    sctx.drawImage(c, 0, 0);
                     URL.revokeObjectURL(u); sc.toBlob(b => r(b || f), 'image/png');
                 }; i.src = u;
             });
