@@ -756,13 +756,13 @@
             if (!k) throw new Error("Key Required");
             const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result.split(',')[1]); rd.readAsDataURL(f); });
             
-            // ── FIXED AI PROMPT: Zero-Tolerance Instructions ──
-            const p = `Extract all phone numbers and contact names from the image with 100% precision. 
-CRITICAL RULES:
-1. Ensure HIGH ACCURACY for digits. Pay strict attention to visually similar numbers (e.g., distinguishing 9 from 0, 8 from 6, 8 from 2).
-2. DO NOT SKIP ANY LINES. Extract every single phone number visible in the list.
-3. Ignore dates, timestamps, and timezones (e.g., EDT, PDT, Apr 13, Mar 14).
-4. Output raw text only. Do not format with markdown (\`\`\`).`;
+            // ── FIXED AI PROMPT: Line-by-Line Enforcement ──
+            const p = `You are a strict, high-precision OCR scanner. Scan the image strictly line by line, from top to bottom.
+CRITICAL INSTRUCTIONS:
+1. Extract EVERY SINGLE 10-digit phone number. DO NOT SKIP ANY ROW.
+2. The image is low resolution. Be extremely careful with circular digits: '6', '8', '9', and '0' look very similar. Look at the closures of the loops.
+3. Ignore all dates, timezones, and text (e.g., EDT, CDT, Nov 06, Jul 12).
+4. Output EXACTLY a vertical list of phone numbers. Nothing else.`;
             
             const body = { contents: [{ parts: [{ inline_data: { mime_type: f.type, data: b64 } }, { text: p }] }] };
             let url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
@@ -797,17 +797,27 @@ CRITICAL RULES:
             return new Promise(r => {
                 const i = new Image(); const u = URL.createObjectURL(f);
                 i.onload = () => {
-                    // ── FIXED TESSERACT PREPROCESSING ──
-                    const s = 2.5; // Changed from 6 to 2.5 to avoid pixelation
+                    // ── FIXED: Binarization & Thresholding ──
+                    const s = 3; // Upscale factor
                     const c = document.createElement('canvas'); c.width = i.naturalWidth * s; c.height = i.naturalHeight * s;
-                    const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.drawImage(i, 0, 0, c.width, c.height);
+                    const ctx = c.getContext('2d'); 
+                    ctx.imageSmoothingEnabled = false; // CRITICAL: Disable smoothing to keep edges sharp and stop 6 looking like 8
+                    ctx.drawImage(i, 0, 0, c.width, c.height);
+                    
                     const id = ctx.getImageData(0, 0, c.width, c.height); const d = id.data;
-                    for (let j = 0; j < d.length; j += 4) { const g = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2]; d[j] = d[j+1] = d[j+2] = g; }
-                    ctx.putImageData(id, 0, 0); const sc = document.createElement('canvas'); sc.width = c.width; sc.height = c.height;
-                    const sctx = sc.getContext('2d'); 
-                    sctx.filter = 'contrast(1.5) brightness(1.1)'; // Better contrast for light background / blue text
-                    sctx.drawImage(c, 0, 0);
-                    URL.revokeObjectURL(u); sc.toBlob(b => r(b || f), 'image/png');
+                    for (let j = 0; j < d.length; j += 4) { 
+                        // Convert to grayscale
+                        const g = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2]; 
+                        // Thresholding: If pixel is dark (text), make it pure black. If light (background), make it pure white.
+                        const threshold = 160;
+                        const val = g < threshold ? 0 : 255;
+                        
+                        d[j] = d[j+1] = d[j+2] = val; 
+                    }
+                    ctx.putImageData(id, 0, 0); 
+                    
+                    // No need for extra CSS filters now because the image is pure 1-bit black and white
+                    URL.revokeObjectURL(u); c.toBlob(b => r(b || f), 'image/png');
                 }; i.src = u;
             });
         }
