@@ -338,7 +338,7 @@
     </div>
 
     <script>
-        // --- 🛡️ SECURITY PROTECTIONS ---
+        // --- PANAGSALAKNIB TI SEKDRIDAD ---
         const allowedDomains = ["thunderous-begonia-f0035c.netlify.app", "localhost", "127.0.0.1", ""];
         
         if (!allowedDomains.includes(window.location.hostname) && window.location.hostname !== "") {
@@ -358,7 +358,7 @@
         let lookupResultsMap = new Map();
         let crossContactDuplicates = new Map();
 
-        // ─── DRAG AND DROP LOGIC ───
+        // ─── LOHIKA TI PANAGGAPU KEN PANAGIPISOK ───
         function setupDragAndDrop(elementId, fileInputId, callback) {
             const dropArea = document.getElementById(elementId);
             const fileInput = document.getElementById(fileInputId);
@@ -384,27 +384,23 @@
                 let dt = e.dataTransfer;
                 let files = dt.files;
                 if (files && files.length > 0) {
-                    fileInput.files = files; // Update hidden input
+                    fileInput.files = files; 
                     if (callback) callback(files);
                 }
             }, false);
             
-            // Handle manual click upload
             fileInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0 && callback) callback(e.target.files);
             });
         }
 
-        // Initialize drag and drop for Excel file
         setupDragAndDrop('lookupUploadArea', 'lookupFileInput', (files) => {
             handleLookupFile(files[0]);
         });
 
-        // Initialize drag and drop for Image files
         setupDragAndDrop('uploadArea', 'fileInput', (files) => {
             handleFiles(files);
         });
-        // ────────────────────────────────────
 
         function deduplicateContactsGlobally() {
             const globalSeen = new Set();
@@ -429,6 +425,8 @@
         }
 
         function extractPhoneNumbers(text) {
+            // Ikkaten dagiti nailemmeng a zero-width spaces tapno agbalin a naurnos ti regex
+            text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
             const phonePattern = /(?:\+?1[-.\s]?)?\(?[0-9OoIl]{3}\)?[-.\s]?[0-9OoIl]{3}[-.\s]?[0-9OoIl]{4}/gi;
             let matches = text.match(phonePattern) || [];
             const noSpaceText = text.replace(/\s+/g, '');
@@ -518,6 +516,8 @@
         }
 
         function groupNumbersByNamesFromImage(text) {
+            // Ikkaten dagiti nailemmeng a zero-width spaces sakbay a maurnos
+            text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
             const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i;
             const prefixedNamePattern = /(?:Relatives|Neighbors|Associates)\s+For:\s+([A-Z][A-Z\s]+[A-Z])/i;
@@ -564,8 +564,12 @@
         function formatPhoneNumber(number) { return number.length === 10 ? `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}` : number; }
 
         function updateStats() {
-            document.getElementById('totalCount').textContent = allNumbers.length;
-            document.getElementById('uniqueCount').textContent = new Set(allNumbers).size;
+            let totalInstances = allNumbers.length;
+            crossContactDuplicates.forEach((count, num) => {
+                totalInstances += (count - 1);
+            });
+            document.getElementById('totalCount').textContent = totalInstances;
+            document.getElementById('uniqueCount').textContent = allNumbers.length;
             document.getElementById('lookupCount').textContent = lookupResultsMap.size;
         }
 
@@ -607,15 +611,19 @@
 
         function updateDuplicateNumbers() {
             const container = document.getElementById('duplicateNumbers');
-            const counts = new Map();
-            allNumbers.forEach(n => counts.set(n, (counts.get(n) || 0) + 1));
-            const dups = [...counts.entries()].filter(([_, c]) => c > 1);
-            if (dups.length === 0) { container.innerHTML = ''; return; }
-            container.innerHTML = dups.map(([n, c]) => `<div><span style="display: inline-block; width: 150px;">${formatPhoneNumber(n)}</span><span style="color: var(--text-muted); font-size: 0.85rem;">${c} times</span></div>`).join('');
+            if (crossContactDuplicates.size === 0) { container.innerHTML = ''; return; }
+            let html = '';
+            crossContactDuplicates.forEach((count, num) => {
+                // Nabaliwan a teksto iti Ingles para kadagiti nadoble a numero
+                html += `<div><span style="display: inline-block; width: 150px;">${formatPhoneNumber(num)}</span><span style="color: var(--accent-red); font-size: 0.85rem;">${count} times</span></div>`;
+            });
+            container.innerHTML = html;
         }
 
         function processText() {
-            const text = document.getElementById('textInput').value.trim();
+            let text = document.getElementById('textInput').value.trim();
+            // Ikkaten ti zero-width spaces a na-kopia manipud iti UI
+            text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
             if (!text) return showNotification('Enter text to process', 'error');
             const newOnes = groupNumbersByNames(text);
             newOnes.forEach(nc => {
@@ -633,7 +641,7 @@
         }
 
         function clearSession() {
-            allNumbers = []; contacts = []; lookupResultsMap.clear();
+            allNumbers = []; contacts = []; lookupResultsMap.clear(); crossContactDuplicates.clear();
             document.getElementById('textInput').value = '';
             updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
             showNotification('Session cleared!', 'success');
@@ -756,7 +764,7 @@
             if (!k) throw new Error("Key Required");
             const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result.split(',')[1]); rd.readAsDataURL(f); });
             
-            // ── FIXED AI PROMPT: Line-by-Line Enforcement ──
+            // NASIMPA NGA AI PROMPT: Panagipatuman iti inya-linia
             const p = `You are a strict, high-precision OCR scanner. Scan the image strictly line by line, from top to bottom.
 CRITICAL INSTRUCTIONS:
 1. Extract EVERY SINGLE 10-digit phone number. DO NOT SKIP ANY ROW.
@@ -797,18 +805,16 @@ CRITICAL INSTRUCTIONS:
             return new Promise(r => {
                 const i = new Image(); const u = URL.createObjectURL(f);
                 i.onload = () => {
-                    // ── FIXED: Binarization & Thresholding ──
-                    const s = 3; // Upscale factor
+                    // NASIMPA: Binarization ken Thresholding
+                    const s = 3; 
                     const c = document.createElement('canvas'); c.width = i.naturalWidth * s; c.height = i.naturalHeight * s;
                     const ctx = c.getContext('2d'); 
-                    ctx.imageSmoothingEnabled = false; // CRITICAL: Disable smoothing to keep edges sharp and stop 6 looking like 8
+                    ctx.imageSmoothingEnabled = false; 
                     ctx.drawImage(i, 0, 0, c.width, c.height);
                     
                     const id = ctx.getImageData(0, 0, c.width, c.height); const d = id.data;
                     for (let j = 0; j < d.length; j += 4) { 
-                        // Convert to grayscale
                         const g = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2]; 
-                        // Thresholding: If pixel is dark (text), make it pure black. If light (background), make it pure white.
                         const threshold = 160;
                         const val = g < threshold ? 0 : 255;
                         
@@ -816,7 +822,6 @@ CRITICAL INSTRUCTIONS:
                     }
                     ctx.putImageData(id, 0, 0); 
                     
-                    // No need for extra CSS filters now because the image is pure 1-bit black and white
                     URL.revokeObjectURL(u); c.toBlob(b => r(b || f), 'image/png');
                 }; i.src = u;
             });
