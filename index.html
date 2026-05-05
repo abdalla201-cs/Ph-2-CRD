@@ -1,4 +1,4 @@
-html
+```html
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
@@ -229,30 +229,45 @@ html
         setupDragAndDrop('lookupUploadArea', 'lookupFileInput', (files) => handleLookupFile(files[0]));
         setupDragAndDrop('uploadArea', 'fileInput', (files) => handleFiles(files));
 
-        function deduplicateContactsGlobally() {
+function deduplicateContactsGlobally() {
             const globalSeen = new Set();
             crossContactDuplicates = new Map();
             const numberTotalCount = new Map();
+
+            // 1. إحصاء التكرارات الشاملة بدقة لتغذية قسم (Duplicates Found)
             contacts.forEach(contact => {
+                // إزالة التكرار الداخلي ضمن نفس الشخص أولاً لمنع التضخم الوهمي
+                contact.numbers = [...new Set(contact.numbers)];
+                
                 contact.numbers.forEach(n => {
                     numberTotalCount.set(n, (numberTotalCount.get(n) || 0) + 1);
                 });
             });
+
+            // تسجيل الأرقام المكررة في الخريطة
             numberTotalCount.forEach((count, num) => {
                 if (count > 1) crossContactDuplicates.set(num, count);
             });
+
+            // 2. التجريد القاسي (Strict Deduplication): الرقم يعيش مرة واحدة فقط عند أول ظهور له
             contacts.forEach(contact => {
                 contact.numbers = contact.numbers.filter(n => {
-                    if (!globalSeen.has(n)) {
-                        globalSeen.add(n);
-                        return true;
-                    }
-                    // لو الرقم مكرر بس هو الوحيد في الـ contact، سيبه
-                    if (contact.numbers.length === 1) return true;
-                    return false;
+                    if (globalSeen.has(n)) return false; // مسح الرقم المكرر فوراً دون استثناءات
+                    globalSeen.add(n);
+                    return true;
                 });
             });
-            allNumbers = contacts.flatMap(c => c.numbers);
+
+            // 3. تنظيف الذاكرة (Garbage Collection)
+            // إذا فقد الشخص كل أرقامه (بسبب التكرار) وليس لديه إيميل أو عنوان، احذفه بالكامل
+            contacts = contacts.filter(c => 
+                c.numbers.length > 0 || 
+                (c.emails && c.emails.length > 0) || 
+                (c.addresses && c.addresses.length > 0)
+            );
+
+            // 4. تحديث المصفوفة الكلية المرجعية
+            allNumbers = Array.from(globalSeen);
         }
 
         function extractPhoneNumbers(text) {
