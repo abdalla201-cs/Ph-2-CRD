@@ -402,26 +402,35 @@
             handleFiles(files);
         });
 
-        function deduplicateContactsGlobally() {
-            const globalSeen = new Set();
+function deduplicateContactsGlobally() {
             crossContactDuplicates = new Map();
             const numberTotalCount = new Map();
+
+            // 1. تنظيف التكرار المحلي لكل جهة اتصال أولاً، ثم حساب التكرار الشامل
             contacts.forEach(contact => {
+                // منع حساب الرقم مرتين إذا تكرر تحت نفس الشخص
+                contact.numbers = [...new Set(contact.numbers)]; 
+
                 contact.numbers.forEach(n => {
                     numberTotalCount.set(n, (numberTotalCount.get(n) || 0) + 1);
                 });
             });
+
+            // 2. بناء خريطة التكرارات الشاملة (للعرض في قسم Duplicates)
+            // واستخراج القائمة الكلية الفريدة (لصالح النسخ والإحصائيات) دون تدمير بيانات الكيانات
+            const uniqueGlobalNumbers = new Set();
+            
             contacts.forEach(contact => {
-                contact.numbers = contact.numbers.filter(n => {
-                    if (globalSeen.has(n)) return false;
-                    globalSeen.add(n);
+                contact.numbers.forEach(n => {
+                    uniqueGlobalNumbers.add(n);
                     if (numberTotalCount.get(n) > 1) {
                         crossContactDuplicates.set(n, numberTotalCount.get(n));
                     }
-                    return true;
                 });
             });
-            allNumbers = contacts.flatMap(c => c.numbers);
+
+            // تعيين القائمة الشاملة الفريدة لخدمة الطبقات الأخرى
+            allNumbers = Array.from(uniqueGlobalNumbers);
         }
 
         function extractPhoneNumbers(text) {
