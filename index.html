@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
@@ -22,11 +23,7 @@
             --success-green: #18a841; 
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -37,27 +34,10 @@
             overflow-x: hidden;
         }
 
-        .container {
-            max-width: 1500px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+        .container { max-width: 1500px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 
-        /* ── Grid Layouts ── */
-        .top-panel {
-            display: grid;
-            grid-template-columns: 1fr 1.5fr 300px;
-            gap: 20px;
-            align-items: stretch;
-        }
-
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
+        .top-panel { display: grid; grid-template-columns: 1fr 1.5fr 300px; gap: 20px; align-items: stretch; }
+        .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 
         @media (max-width: 1100px) {
             .top-panel { grid-template-columns: 1fr 1fr; }
@@ -70,149 +50,39 @@
             .results-grid { grid-template-columns: 1fr; }
         }
 
-        /* ── Cards ── */
-        .card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
+        .card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; }
+        .card h3 { font-size: 1.05rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 
-        .card h3 {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: var(--accent-blue);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-        }
+        button { font-family: inherit; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; font-size: 0.9rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 
-        /* ── Buttons ── */
-        button {
-            font-family: inherit;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 0.9rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background-color: var(--accent-blue);
-            color: #121212;
-            padding: 12px 20px;
-            width: 100%;
-            margin-top: auto;
-        }
+        .btn-primary { background-color: var(--accent-blue); color: #121212; padding: 12px 20px; width: 100%; margin-top: auto; }
         .btn-primary:hover { background-color: var(--accent-blue-hover); }
-
-        .btn-danger {
-            background-color: var(--accent-red);
-            color: #fff;
-            padding: 12px 20px;
-            width: 100%;
-        }
+        .btn-danger { background-color: var(--accent-red); color: #fff; padding: 12px 20px; width: 100%; }
         .btn-danger:hover { background-color: var(--accent-red-hover); }
-
-        .btn-secondary {
-            background-color: var(--bg-input);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 10px 15px;
-        }
+        .btn-secondary { background-color: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 15px; }
         .btn-secondary:hover { background-color: #333333; border-color: #555; }
-
-        .copy-btn {
-            background-color: #333333;
-            color: var(--text-main);
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            border: 1px solid var(--border-color);
-        }
+        .copy-btn { background-color: #333333; color: var(--text-main); padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; border: 1px solid var(--border-color); }
         .copy-btn:hover { background-color: #444; color: #fff; }
 
-        /* ── UI Elements ── */
-        .upload-area {
-            background-color: var(--bg-input);
-            border: 1px dashed var(--border-color);
-            border-radius: 8px;
-            padding: 30px 15px;
-            text-align: center;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            min-height: 120px;
-            margin-bottom: 15px;
-        }
+        .upload-area { background-color: var(--bg-input); border: 1px dashed var(--border-color); border-radius: 8px; padding: 30px 15px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s ease; min-height: 120px; margin-bottom: 15px; }
         .upload-area:hover, .upload-area.dragover { border-color: var(--accent-blue); background-color: rgba(51, 204, 255, 0.05); }
-        
         .file-input { display: none; }
 
-        .textarea {
-            background-color: var(--bg-input);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            border-radius: 8px;
-            padding: 15px;
-            width: 100%;
-            flex-grow: 1;
-            resize: none;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.85rem;
-            line-height: 1.5;
-            outline: none;
-            transition: border-color 0.2s;
-            margin-bottom: 15px;
-            min-height: 180px;
-        }
+        .textarea { background-color: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 8px; padding: 15px; width: 100%; flex-grow: 1; resize: none; font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; line-height: 1.5; outline: none; transition: border-color 0.2s; margin-bottom: 15px; min-height: 180px; }
         .textarea:focus { border-color: var(--accent-blue); }
         .textarea::placeholder { color: var(--text-muted); }
 
         .input-group { display: flex; gap: 10px; }
         .input-group button { flex: 1; }
 
-        .api-input {
-            width: 100%; background: var(--bg-input); border: 1px solid var(--border-color);
-            border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 0.8rem; outline: none; margin-bottom: 10px;
-        }
+        .api-input { width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 0.8rem; outline: none; margin-bottom: 10px; }
         .api-input:focus { border-color: var(--accent-blue); }
 
-        /* ── Stats ── */
-        .stats-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; flex-grow: 1;}
-        .stat-item {
-            display: flex; justify-content: space-between; align-items: center;
-            background-color: var(--bg-input); padding: 12px 16px; border-radius: 8px;
-            font-size: 0.9rem; color: var(--text-muted); border: 1px solid var(--border-color);
-        }
+        .stats-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; flex-grow: 1; }
+        .stat-item { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-input); padding: 12px 16px; border-radius: 8px; font-size: 0.9rem; color: var(--text-muted); border: 1px solid var(--border-color); }
         .stat-item .val { color: #fff; font-weight: 700; font-size: 1rem; }
 
-        /* ── Results Area ── */
-        .result-content {
-            background-color: var(--bg-input);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            height: 380px;
-            overflow-y: auto;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.95rem;
-            line-height: 1.5;
-        }
-
+        .result-content { background-color: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; height: 380px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 0.95rem; line-height: 1.5; }
         .result-content::-webkit-scrollbar { width: 6px; }
         .result-content::-webkit-scrollbar-thumb { background-color: #444; border-radius: 4px; }
 
@@ -223,13 +93,7 @@
         .duplicate-item { display: flex; justify-content: space-between; }
         .duplicate-count { color: var(--text-muted); font-size: 0.8rem; }
 
-        /* ── Notifications & Progress ── */
-        .notification {
-            position: fixed; top: 20px; right: 20px; padding: 12px 24px; border-radius: 8px;
-            color: #fff; font-weight: 600; font-size: 0.85rem; z-index: 1000;
-            transform: translateX(120%); transition: transform 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
+        .notification { position: fixed; top: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; color: #fff; font-weight: 600; font-size: 0.85rem; z-index: 1000; transform: translateX(120%); transition: transform 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .notification.show { transform: translateX(0); }
         .notification.success { background-color: var(--success-green); }
         .notification.error { background-color: var(--accent-red); }
@@ -244,38 +108,30 @@
     <div class="container" id="appContainer">
         
         <div class="top-panel">
-            
             <div class="card">
                 <h3><span>🖼️ OCR Image Upload</span></h3>
-                
                 <div style="margin-bottom:15px; background:rgba(0,0,0,0.2); border-radius:8px; padding:15px; border:1px solid rgba(255,255,255,0.05);">
                     <h4 style="font-size:0.85rem; color:var(--accent-blue); margin-bottom:10px;">⚙️ Gemini AI Settings</h4>
-                    
                     <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🧠 Select Model</label>
                     <select id="aiModelSelect" onchange="saveModelSelection(this.value)" style="width:100%; background:var(--bg-input); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; color:#fff; font-size:0.85rem; outline:none; margin-bottom:12px; appearance: auto; cursor:pointer;">
                         <option value="gemini-2.0-flash" style="background:#1e1e1e;">🔥 Gemini 2.0 Flash (Default)</option>
                         <option value="gemini-1.5-flash" style="background:#1e1e1e;">✅ Gemini 1.5 Flash</option>
                     </select>
-
                     <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🔑 API Key <span style="color:var(--accent-red);">(Required for AI OCR)</span></label>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key..." class="api-input" style="margin-bottom:0;"
-                            oninput="saveGeminiKey(this.value)" />
-                        <button class="btn-secondary" onclick="testApiKey()" style="padding: 8px; margin: 0; min-width: 40px;" title="فحص المفتاح ومعرفة الموديلات المتاحة">🧪</button>
+                        <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key..." class="api-input" style="margin-bottom:0;" oninput="saveGeminiKey(this.value)" />
+                        <button class="btn-secondary" onclick="testApiKey()" style="padding: 8px; margin: 0; min-width: 40px;" title="فحص المفتاح">🧪</button>
                         <span id="geminiStatus" style="font-size:0.75rem; white-space:nowrap; opacity:0.75;">⬜ Not set</span>
                     </div>
                 </div>
-
                 <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
                     <p style="color: var(--text-muted); font-size: 0.85rem;">Drag images here or click to browse</p>
                     <input type="file" id="fileInput" class="file-input" multiple accept="image/*,.pdf">
                 </div>
-
                 <div class="input-group">
                     <button class="btn-secondary" onclick="document.getElementById('fileInput').click()">📁 Choose Files</button>
                     <button class="btn-secondary" onclick="pasteFromClipboard()">📋 Paste Image</button>
                 </div>
-
                 <div class="progress-container" id="progressContainer">
                     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
                     <div class="progress-text" id="progressText">Processing...</div>
@@ -295,19 +151,15 @@
                     <div class="stat-item"><span>Unique Numbers:</span> <span class="val" id="uniqueCount">0</span></div>
                     <div class="stat-item"><span>Lookup Entries:</span> <span class="val" id="lookupCount">0</span></div>
                 </div>
-                
                 <div style="margin-top: 5px; margin-bottom: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
                     <button class="btn-secondary" onclick="copyForWaChecker()" style="width: 100%; margin-bottom: 10px;">📋 Copy for WA Extension</button>
-                    
                     <input type="file" id="lookupFileInput" class="file-input" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                     <div class="upload-area" id="lookupUploadArea" style="min-height: 50px; padding: 10px; margin-bottom: 0;" onclick="document.getElementById('lookupFileInput').click()">
                         <p style="font-size: 0.8rem; color: var(--text-muted); pointer-events: none;">📂 Drop WA Checker Excel</p>
                     </div>
                 </div>
-
                 <button class="btn-danger" onclick="clearSession()">🗑️ Clear Session</button>
             </div>
-
         </div>
 
         <div class="results-grid">
@@ -315,12 +167,10 @@
                 <h3><span>📋 Results (by Name)</span> <button class="copy-btn" onclick="copyToClipboard('cleanedNumbers')">Copy</button></h3>
                 <div class="result-content" id="cleanedNumbers"></div>
             </div>
-
             <div class="card">
                 <h3><span>🇺🇸 US American Format</span> <button class="copy-btn" onclick="copyToClipboard('americanNumbers')">Copy</button></h3>
                 <div class="result-content" id="americanNumbers"></div>
             </div>
-
             <div class="card">
                 <h3><span>🔄 Duplicates Found</span> <button class="copy-btn" onclick="copyToClipboard('duplicateNumbers')">Copy</button></h3>
                 <div class="result-content" id="duplicateNumbers"></div>
@@ -334,23 +184,20 @@
             </h3>
             <textarea id="debugOutput" style="width:100%; height:150px; background:var(--bg-main); color:var(--success-green); font-family:monospace; font-size:0.8rem; border:1px solid var(--border-color); border-radius:8px; padding:10px; resize:vertical;" readonly></textarea>
         </div>
-
     </div>
 
     <script>
-        // --- PANAGSALAKNIB TI SEKDRIDAD ---
         const allowedDomains = ["thunderous-begonia-f0035c.netlify.app", "localhost", "127.0.0.1", ""];
-        
         if (!allowedDomains.includes(window.location.hostname) && window.location.hostname !== "") {
             document.body.innerHTML = "<div style='display:flex; justify-content:center; align-items:center; height:100vh; background:#121212; color:#ef4444; font-family:sans-serif;'><h2>🚫 Unauthorized Access. This tool is domain-locked.</h2></div>";
-            throw new Error("Unauthorized Domain"); 
+            throw new Error("Unauthorized Domain");
         }
 
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.onkeydown = function(e) {
-            if (e.keyCode == 123) return false; 
+            if (e.keyCode == 123) return false;
             if (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0))) return false;
-            if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false; 
+            if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
         };
 
         let allNumbers = [];
@@ -358,49 +205,29 @@
         let lookupResultsMap = new Map();
         let crossContactDuplicates = new Map();
 
-        // ─── LOHIKA TI PANAGGAPU KEN PANAGIPISOK ───
         function setupDragAndDrop(elementId, fileInputId, callback) {
             const dropArea = document.getElementById(elementId);
             const fileInput = document.getElementById(fileInputId);
-
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, preventDefaults, false);
+                dropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
             });
-
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-
             ['dragenter', 'dragover'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false);
             });
-
             ['dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false);
             });
-
             dropArea.addEventListener('drop', (e) => {
-                let dt = e.dataTransfer;
-                let files = dt.files;
-                if (files && files.length > 0) {
-                    fileInput.files = files; 
-                    if (callback) callback(files);
-                }
+                let files = e.dataTransfer.files;
+                if (files && files.length > 0) { fileInput.files = files; if (callback) callback(files); }
             }, false);
-            
             fileInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0 && callback) callback(e.target.files);
             });
         }
 
-        setupDragAndDrop('lookupUploadArea', 'lookupFileInput', (files) => {
-            handleLookupFile(files[0]);
-        });
-
-        setupDragAndDrop('uploadArea', 'fileInput', (files) => {
-            handleFiles(files);
-        });
+        setupDragAndDrop('lookupUploadArea', 'lookupFileInput', (files) => handleLookupFile(files[0]));
+        setupDragAndDrop('uploadArea', 'fileInput', (files) => handleFiles(files));
 
         function deduplicateContactsGlobally() {
             const globalSeen = new Set();
@@ -411,21 +238,24 @@
                     numberTotalCount.set(n, (numberTotalCount.get(n) || 0) + 1);
                 });
             });
+            numberTotalCount.forEach((count, num) => {
+                if (count > 1) crossContactDuplicates.set(num, count);
+            });
             contacts.forEach(contact => {
                 contact.numbers = contact.numbers.filter(n => {
-                    if (globalSeen.has(n)) return false;
-                    globalSeen.add(n);
-                    if (numberTotalCount.get(n) > 1) {
-                        crossContactDuplicates.set(n, numberTotalCount.get(n));
+                    if (!globalSeen.has(n)) {
+                        globalSeen.add(n);
+                        return true;
                     }
-                    return true;
+                    // لو الرقم مكرر بس هو الوحيد في الـ contact، سيبه
+                    if (contact.numbers.length === 1) return true;
+                    return false;
                 });
             });
             allNumbers = contacts.flatMap(c => c.numbers);
         }
 
         function extractPhoneNumbers(text) {
-            // Ikkaten dagiti nailemmeng a zero-width spaces tapno agbalin a naurnos ti regex
             text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
             const phonePattern = /(?:\+?1[-.\s]?)?\(?[0-9OoIl]{3}\)?[-.\s]?[0-9OoIl]{3}[-.\s]?[0-9OoIl]{4}/gi;
             let matches = text.match(phonePattern) || [];
@@ -446,11 +276,22 @@
         function extractAddressFromLine(line) {
     if (/\t/.test(line)) return null;
     if (/experian|transunion|equifax|phone record|bank account|household|wireless|landline|cellular|residence|historic|current|previous|voice line/i.test(line)) return null;
-    const addressRegex = /\b\d+\s+[A-Za-z]{1}[A-Za-z0-9\s.'\-]*?(?:Street|Avenue|Boulevard|Drive|Road|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
+
+    // Rural Route addresses (e.g. RR BOX 8327)
+    if (/^RR\s+\w+\s+\d+$/i.test(line.trim())) return line.trim();
+
+    const addressRegex = /\b\d+\s+(?:[A-Za-z0-9]+\s+)*?(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|Rdg|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
+
     const match = line.match(addressRegex);
     if (!match) return null;
     const addr = match[0].trim();
     if (addr.split(/\s+/).length < 3) return null;
+
+    // ضم المدينة والولاية لو موجودين في نفس السطر
+    const cityStateMatch = line.match(/,?\s*([A-Za-z\s]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)\s*$/);
+    if (cityStateMatch && !addr.includes(cityStateMatch[0].trim())) {
+        return addr + ', ' + cityStateMatch[1].trim() + ', ' + cityStateMatch[2] + ' ' + cityStateMatch[3];
+    }
     return addr;
 }
 
@@ -465,34 +306,37 @@
         }
 
         function groupNumbersByNames(text) {
-            const lines = text.split('\n');
+            text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+            const rawLines = text.split('\n');
+            const mergedLines = [];
+            for (let i = 0; i < rawLines.length; i++) {
+                const line = rawLines[i].trim();
+                if (/^[A-Z][A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?$/.test(line) && mergedLines.length > 0) {
+                    mergedLines[mergedLines.length - 1] = mergedLines[mergedLines.length - 1].trim() + ' ' + line;
+                } else {
+                    mergedLines.push(line);
+                }
+            }
+
+            const lines = mergedLines;
             const newContacts = [];
             let currentContact = null;
             let orphanNumbers = [];
             let orphanEmails = [];
             let orphanAddresses = [];
-for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    // دمج سطر المدينة مع سطر العنوان اللي قبله
-    if (i > 0 && /^[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?$/.test(line)) {
-        const prevLine = lines[i - 1].trim();
-        if (extractAddressFromLine(prevLine)) {
-            const idx = currentContact ? currentContact.addresses.length - 1 : orphanAddresses.length - 1;
-            if (currentContact && currentContact.addresses.length > 0) {
-                currentContact.addresses[idx] = currentContact.addresses[idx] + ', ' + line;
-            } else if (!currentContact && orphanAddresses.length > 0) {
-                orphanAddresses[idx] = orphanAddresses[idx] + ', ' + line;
-            }
-            continue;
-        }
-    }
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
                 const cleanedLine = line.replace(/\s+\d{1,3}\s*$/, '').trim();
                 const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i);
                 const emails = extractEmails(line);
                 const addr = extractAddressFromLine(line);
                 const numbers = extractPhoneNumbers(line);
-                if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3 && !line.includes('@')) {
+
+                if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3 && !line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line)) {
                     const potentialName = nameMatch[1].trim();
                     if (isValidContactName(potentialName)) {
                         if (currentContact) newContacts.push(currentContact);
@@ -521,6 +365,7 @@ for (let i = 0; i < lines.length; i++) {
                     }
                 }
             }
+
             if (currentContact) newContacts.push(currentContact);
             else if (orphanNumbers.length || orphanEmails.length || orphanAddresses.length) {
                 newContacts.push({ name: "EXTRACTED DATA", numbers: orphanNumbers, emails: orphanEmails, addresses: orphanAddresses });
@@ -529,7 +374,6 @@ for (let i = 0; i < lines.length; i++) {
         }
 
         function groupNumbersByNamesFromImage(text) {
-            // Ikkaten dagiti nailemmeng a zero-width spaces sakbay a maurnos
             text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
             const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i;
@@ -578,9 +422,7 @@ for (let i = 0; i < lines.length; i++) {
 
         function updateStats() {
             let totalInstances = allNumbers.length;
-            crossContactDuplicates.forEach((count, num) => {
-                totalInstances += (count - 1);
-            });
+            crossContactDuplicates.forEach((count, num) => { totalInstances += (count - 1); });
             document.getElementById('totalCount').textContent = totalInstances;
             document.getElementById('uniqueCount').textContent = allNumbers.length;
             document.getElementById('lookupCount').textContent = lookupResultsMap.size;
@@ -627,7 +469,6 @@ for (let i = 0; i < lines.length; i++) {
             if (crossContactDuplicates.size === 0) { container.innerHTML = ''; return; }
             let html = '';
             crossContactDuplicates.forEach((count, num) => {
-                // Nabaliwan a teksto iti Ingles para kadagiti nadoble a numero
                 html += `<div><span style="display: inline-block; width: 150px;">${formatPhoneNumber(num)}</span><span style="color: var(--accent-red); font-size: 0.85rem;">${count} times</span></div>`;
             });
             container.innerHTML = html;
@@ -635,7 +476,6 @@ for (let i = 0; i < lines.length; i++) {
 
         function processText() {
             let text = document.getElementById('textInput').value.trim();
-            // Ikkaten ti zero-width spaces a na-kopia manipud iti UI
             text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
             if (!text) return showNotification('Enter text to process', 'error');
             const newOnes = groupNumbersByNames(text);
@@ -704,23 +544,20 @@ for (let i = 0; i < lines.length; i++) {
             const dummy = document.createElement('div');
             dummy.textContent = 'dummy'; dummy.style.position = 'absolute'; dummy.style.left = '-9999px';
             document.body.appendChild(dummy);
-            
-            const sel = window.getSelection(); 
+            const sel = window.getSelection();
             const range = document.createRange();
-            range.selectNodeContents(dummy); 
-            sel.removeAllRanges(); 
-            
-            sel.addRange(range); 
-            
+            range.selectNodeContents(dummy);
+            sel.removeAllRanges();
+            sel.addRange(range);
             const listener = (event) => {
                 event.preventDefault();
                 event.clipboardData.setData('text/html', cleanHtml);
                 event.clipboardData.setData('text/plain', plainText.replace(/\n{3,}/g, '\n\n').trim());
             };
-            document.addEventListener('copy', listener); 
+            document.addEventListener('copy', listener);
             document.execCommand('copy');
-            document.removeEventListener('copy', listener); 
-            sel.removeAllRanges(); 
+            document.removeEventListener('copy', listener);
+            sel.removeAllRanges();
             document.body.removeChild(dummy);
             showNotification('Copied perfectly!', 'success');
         }
@@ -776,18 +613,14 @@ for (let i = 0; i < lines.length; i++) {
             const m = document.getElementById('aiModelSelect').value;
             if (!k) throw new Error("Key Required");
             const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result.split(',')[1]); rd.readAsDataURL(f); });
-            
-            // NASIMPA NGA AI PROMPT: Panagipatuman iti inya-linia
             const p = `You are a strict, high-precision OCR scanner. Scan the image strictly line by line, from top to bottom.
 CRITICAL INSTRUCTIONS:
 1. Extract EVERY SINGLE 10-digit phone number. DO NOT SKIP ANY ROW.
 2. The image is low resolution. Be extremely careful with circular digits: '6', '8', '9', and '0' look very similar. Look at the closures of the loops.
 3. Ignore all dates, timezones, and text (e.g., EDT, CDT, Nov 06, Jul 12).
 4. Output EXACTLY a vertical list of phone numbers. Nothing else.`;
-            
             const body = { contents: [{ parts: [{ inline_data: { mime_type: f.type, data: b64 } }, { text: p }] }] };
-            let url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`;
-            const res = await fetch(url, { method: 'POST', body: JSON.stringify(body) });
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`, { method: 'POST', body: JSON.stringify(body) });
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
             let txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -818,23 +651,18 @@ CRITICAL INSTRUCTIONS:
             return new Promise(r => {
                 const i = new Image(); const u = URL.createObjectURL(f);
                 i.onload = () => {
-                    // NASIMPA: Binarization ken Thresholding
-                    const s = 3; 
+                    const s = 3;
                     const c = document.createElement('canvas'); c.width = i.naturalWidth * s; c.height = i.naturalHeight * s;
-                    const ctx = c.getContext('2d'); 
-                    ctx.imageSmoothingEnabled = false; 
+                    const ctx = c.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
                     ctx.drawImage(i, 0, 0, c.width, c.height);
-                    
                     const id = ctx.getImageData(0, 0, c.width, c.height); const d = id.data;
-                    for (let j = 0; j < d.length; j += 4) { 
-                        const g = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2]; 
-                        const threshold = 160;
-                        const val = g < threshold ? 0 : 255;
-                        
-                        d[j] = d[j+1] = d[j+2] = val; 
+                    for (let j = 0; j < d.length; j += 4) {
+                        const g = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2];
+                        const val = g < 160 ? 0 : 255;
+                        d[j] = d[j+1] = d[j+2] = val;
                     }
-                    ctx.putImageData(id, 0, 0); 
-                    
+                    ctx.putImageData(id, 0, 0);
                     URL.revokeObjectURL(u); c.toBlob(b => r(b || f), 'image/png');
                 }; i.src = u;
             });
