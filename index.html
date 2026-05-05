@@ -601,7 +601,7 @@ for (let i = 0; i < lines.length; i++) {
             nameToDataMap.forEach(({ numbers, emails, addresses }, name) => {
                 html += '<div class="contact-group" style="margin-bottom: 20px;">';
                 html += `<div><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase;">${name}</span></div>`;
-                addresses.forEach(addr => { html += `<div><span style="color: rgb(255, 255, 0);">${addr}</span></div>`; });
+                addresses.forEach(addr => { html += `<div><span style="color: rgb(229, 158, 37);">${addr}</span></div>`; });
                 emails.forEach(email => { html += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>`; });
                 numbers.forEach((number) => {
                     const res = lookupResultsMap.get(number);
@@ -685,7 +685,7 @@ for (let i = 0; i < lines.length; i++) {
                 map.forEach(({ n, e, a }, name) => {
                     cleanHtml += `<div><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase;">${name}</span></div>\n`;
                     plainText += name + '\n';
-                    a.forEach(addr => { cleanHtml += `<div><span style="color: rgb(255, 255, 0);">${addr}</span></div>\n`; plainText += addr + '\n'; });
+                    a.forEach(addr => { cleanHtml += `<div><span style="color: rgb(229, 158, 37);">${addr}</span></div>\n`; plainText += addr + '\n'; });
                     e.forEach(email => { cleanHtml += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>\n`; plainText += email + '\n'; });
                     n.forEach(num => {
                         const res = lookupResultsMap.get(num);
