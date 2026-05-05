@@ -444,15 +444,15 @@
         function extractEmails(line) { return line.match(emailRegex) || []; }
 
         function extractAddressFromLine(line) {
-            if (/\t/.test(line)) return null;
-            if (/experian|transunion|equifax|phone record|bank account|household|wireless|landline|cellular|residence|historic|current|previous|voice line/i.test(line)) return null;
-            const addressRegex = /\b\d+\s+[A-Za-z]{2}[A-Za-z0-9\s.'\-]*?(?:Street|Avenue|Boulevard|Drive|Road|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?(?:[,\s]+[A-Za-z0-9\s,.'\-]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)?/i;
-            const match = line.match(addressRegex);
-            if (!match) return null;
-            const addr = match[0].trim();
-            if (addr.split(/\s+/).length < 3) return null;
-            return addr;
-        }
+    if (/\t/.test(line)) return null;
+    if (/experian|transunion|equifax|phone record|bank account|household|wireless|landline|cellular|residence|historic|current|previous|voice line/i.test(line)) return null;
+    const addressRegex = /\b\d+\s+[A-Za-z]{1}[A-Za-z0-9\s.'\-]*?(?:Street|Avenue|Boulevard|Drive|Road|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
+    const match = line.match(addressRegex);
+    if (!match) return null;
+    const addr = match[0].trim();
+    if (addr.split(/\s+/).length < 3) return null;
+    return addr;
+}
 
         function isValidContactName(name) {
             const lowerName = name.toLowerCase().trim();
@@ -471,9 +471,22 @@
             let orphanNumbers = [];
             let orphanEmails = [];
             let orphanAddresses = [];
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
+for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    // دمج سطر المدينة مع سطر العنوان اللي قبله
+    if (i > 0 && /^[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?$/.test(line)) {
+        const prevLine = lines[i - 1].trim();
+        if (extractAddressFromLine(prevLine)) {
+            const idx = currentContact ? currentContact.addresses.length - 1 : orphanAddresses.length - 1;
+            if (currentContact && currentContact.addresses.length > 0) {
+                currentContact.addresses[idx] = currentContact.addresses[idx] + ', ' + line;
+            } else if (!currentContact && orphanAddresses.length > 0) {
+                orphanAddresses[idx] = orphanAddresses[idx] + ', ' + line;
+            }
+            continue;
+        }
+    }
                 const cleanedLine = line.replace(/\s+\d{1,3}\s*$/, '').trim();
                 const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i);
                 const emails = extractEmails(line);
