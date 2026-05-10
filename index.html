@@ -353,7 +353,7 @@ function deduplicateContactsGlobally() {
                 const addr = extractAddressFromLine(line);
                 const numbers = extractPhoneNumbers(line);
 
-                if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3 && !line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line)) {
+                const isDegree = /\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(cleanedLine); if (nameMatch && (!cleanedLine.match(/\d/) || isDegree) && cleanedLine.length > 3 && !line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line)) {
                     const potentialName = nameMatch[1].trim();
                     if (isValidContactName(potentialName)) {
                         if (currentContact) newContacts.push(currentContact);
