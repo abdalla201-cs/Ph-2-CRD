@@ -261,6 +261,7 @@ function deduplicateContactsGlobally() {
             // 3. تنظيف الذاكرة (Garbage Collection)
             // إذا فقد الشخص كل أرقامه (بسبب التكرار) وليس لديه إيميل أو عنوان، احذفه بالكامل
             contacts = contacts.filter(c => 
+                c.isLabel ||
                 c.numbers.length > 0 || 
                 (c.emails && c.emails.length > 0) || 
                 (c.addresses && c.addresses.length > 0)
@@ -312,8 +313,7 @@ function deduplicateContactsGlobally() {
 
         function isValidContactName(name) {
             const lowerName = name.toLowerCase().trim();
-            if (/\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(name)) return false;
-            if (/^(associates?|deceased|phone\s*#?\(s\)?|email\s*address|sources?)$/i.test(lowerName)) return false;
+            if (/\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(name)) return false; if (/^(deceased|phone\s*#?\(s\)?|email\s*address|sources?)$/i.test(lowerName)) return false;
             const invalidWords = ['repeat', '1st degree', '2nd degree', '3rd degree', 'associates', 'no work', 'wrong', 'do not call', 'dnc', 'not interested', 'voicemail', 'disconnected', 'busy', 'no answer', 'left message', 'spoke', 'callback', 'call back', 'texted', 'dead', 'sold', 'spanish', 'language', 'invalid', 'status', 'update', 'said', 'told', 'interested', 'machine', 'mailbox', 'message', 'none', 'n/a', 'na', 'not in service', 'no longer', 'business', 'out of service', 'does not work', 'stop', 'quit', 'opt out', 'remove', 'hang up', 'hung up', 'bad number', 'wrong number', 'not working', 'no english', 'english', 'not', 'dont', 'doesnt', 'work', 'worked', 'working', 'number', 'phone', 'contact', 'call', 'caller', 'cancel', 'cancelled', 'delete', 'deleted', 'unknown', 'fake', 'bogus', 'scam', 'spam', 'spamming', 'scammer', 'fraud', 'fraudulent', 'hello', 'owner', 'manager', 'tenant', 'landlord', 'resident', 'husband', 'wife', 'son', 'daughter', 'father', 'mother', 'brother', 'sister', 'uncle', 'aunt', 'cousin', 'nephew', 'niece', 'grandfather', 'grandmother', 'grandson', 'granddaughter', 'family', 'friend', 'neighbor', 'associate', 'relative', 'relatives', 'neighbors', 'associates', 'info', 'information', 'details', 'detail', 'data', 'record', 'records', 'file', 'files', 'account', 'accounts', 'profile', 'profiles', 'report', 'reports', 'document', 'documents', 'vm', 'lm', 'cb', 'ni', 'wn', 'bad', 'good', 'yes', 'no', 'true', 'false', 'same', 'diff', 'different', 'new', 'old', 'current', 'previous', 'historic', 'voice', 'line', 'cell', 'mobile', 'landline', 'wireless', 'telephone', 'tel', 'fax', 'email', 'address', 'addr', 'location', 'place', 'property', 'properties', 'home', 'house', 'apartment', 'apt', 'suite', 'ste', 'unit', 'room', 'rm', 'building', 'bldg', 'floor', 'fl', 'level', 'lvl', 'street', 'st', 'avenue', 'ave', 'boulevard', 'blvd', 'drive', 'dr', 'road', 'rd', 'lane', 'ln', 'way', 'court', 'ct', 'terrace', 'ter', 'parkway', 'pkwy', 'highway', 'hwy', 'circle', 'cir', 'loop', 'trail', 'trl', 'row', 'square', 'sq', 'broadway', 'crossing', 'xing', 'alley', 'left vm', 'lm on', 'did not answer', 'hanged up', 'not int', 'no int', 'take me off', 'remove me', 'wrong num', 'wrong person', 'wrong contact', 'bad num', 'mailbox full', 'vm full', 'voicemail full', 'not setup', 'not set up', 'busy signal', 'fast busy', 'fax machine', 'modem', 'screeching', 'dead air', 'silence', 'dropped', 'dropped call', 'call dropped', 'call later', 'try again', 'try later', 'call tomorrow', 'appointment', 'appt', 'schedule', 'scheduled', 'meeting', 'follow up', 'lead', 'prospect', 'opportunity', 'deal', 'client', 'customer', 'patient', 'buyer', 'seller', 'renter', 'leaser', 'lessee', 'lessor', 'broker', 'agent', 'realtor', 'real estate', 'realty', 'property management', 'pm', 'llc', 'inc', 'corp', 'corporation', 'company', 'co', 'ltd', 'limited', 'group', 'grp', 'partners', 'enterprises', 'ent', 'holdings', 'investments', 'inv', 'trust', 'fund', 'estate of', 'heirs of', 'care of', 'attn', 'attention'];
             for (let word of invalidWords) { if (new RegExp('\\b' + word + '\\b', 'i').test(lowerName)) return false; }
             const wordsCount = lowerName.split(/\s+/).length;
@@ -357,7 +357,7 @@ function deduplicateContactsGlobally() {
                     const potentialName = nameMatch[1].trim();
                     if (isValidContactName(potentialName)) {
                         if (currentContact) newContacts.push(currentContact);
-                        currentContact = { name: potentialName, numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses] };
+                        const isDegreeLabel = /\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(potentialName) || /^associates?$/i.test(potentialName); currentContact = { name: potentialName, numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses], isLabel: isDegreeLabel };
                         orphanNumbers = []; orphanEmails = []; orphanAddresses = [];
                     } else {
                         if (currentContact) {
@@ -459,7 +459,7 @@ function deduplicateContactsGlobally() {
             let html = '';
             nameToDataMap.forEach(({ numbers, emails, addresses }, name) => {
                 html += '<div class="contact-group" style="margin-bottom: 20px;">';
-                html += `<div><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase;">${name}</span></div>`;
+                const contact = contacts.find(c => c.name === name); const isLabel = contact && contact.isLabel; const nameColor = 'rgb(51, 204, 255)'; const nameBorder = isLabel ? 'border-top: 1px solid #444; margin-top: 10px; padding-top: 10px;' : ''; html += `<div style="${nameBorder}"><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${isLabel ? '── ' + name + ' ──' : name}</span></div>`;
                 addresses.forEach(addr => { html += `<div><span style="color: rgb(229, 158, 37);">${addr}</span></div>`; });
                 emails.forEach(email => { html += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>`; });
                 numbers.forEach((number) => {
