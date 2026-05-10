@@ -466,7 +466,7 @@
             let html = '';
             nameToDataMap.forEach(({ numbers, emails, addresses, isLabel }, name) => {
                 html += '<div class="contact-group" style="margin-bottom: 20px;">';
-                const nameColor = 'rgb(51, 204, 255)'; const nameBorder = isLabel ? 'border-top: 1px solid #444; margin-top: 10px; padding-top: 10px;' : ''; html += `<div style="${nameBorder}"><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${isLabel ? '── ' + name + ' ──' : name}</span></div>`;
+                const nameColor = 'rgb(51, 204, 255)'; const nameBorder = isLabel ? 'border-top: 1px solid #444; margin-top: 10px; padding-top: 10px;' : ''; html += `<div style="${nameBorder}"><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${name}</span></div>`;
                 addresses.forEach(addr => { html += `<div><span style="color: rgb(229, 158, 37);">${addr}</span></div>`; });
                 emails.forEach(email => { html += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>`; });
                 numbers.forEach((number) => {
@@ -548,8 +548,8 @@
                 });
                 map.forEach(({ n, e, a, isLabel }, name) => {
                     const nameColor = 'rgb(51, 204, 255)'; 
-                    cleanHtml += `<div><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${isLabel ? '── ' + name + ' ──' : name}</span></div>\n`;
-                    plainText += (isLabel ? '── ' + name + ' ──' : name) + '\n';
+                    cleanHtml += `<div><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${name}</span></div>\n`;
+                    plainText += name + '\n';
                     a.forEach(addr => { cleanHtml += `<div><span style="color: rgb(229, 158, 37);">${addr}</span></div>\n`; plainText += addr + '\n'; });
                     e.forEach(email => { cleanHtml += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>\n`; plainText += email + '\n'; });
                     n.forEach(num => {
