@@ -387,7 +387,7 @@ function deduplicateContactsGlobally() {
             else if (orphanNumbers.length || orphanEmails.length || orphanAddresses.length) {
                 newContacts.push({ name: "EXTRACTED DATA", numbers: orphanNumbers, emails: orphanEmails, addresses: orphanAddresses });
             }
-            return newContacts.filter(c => c.numbers.length > 0 || c.emails.length > 0 || c.addresses.length > 0);
+            return newContacts.filter(c => c.isLabel || c.numbers.length > 0 || c.emails.length > 0 || c.addresses.length > 0);
         }
 
         function groupNumbersByNamesFromImage(text) {
