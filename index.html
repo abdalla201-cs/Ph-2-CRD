@@ -1,4 +1,3 @@
-html
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
@@ -229,7 +228,7 @@ html
         setupDragAndDrop('lookupUploadArea', 'lookupFileInput', (files) => handleLookupFile(files[0]));
         setupDragAndDrop('uploadArea', 'fileInput', (files) => handleFiles(files));
 
-function deduplicateContactsGlobally() {
+        function deduplicateContactsGlobally() {
             const globalSeen = new Set();
             crossContactDuplicates = new Map();
             const numberTotalCount = new Map();
@@ -252,14 +251,14 @@ function deduplicateContactsGlobally() {
             // 2. التجريد القاسي (Strict Deduplication): الرقم يعيش مرة واحدة فقط عند أول ظهور له
             contacts.forEach(contact => {
                 contact.numbers = contact.numbers.filter(n => {
-                    if (globalSeen.has(n)) return false; // مسح الرقم المكرر فوراً دون استثناءات
+                    if (globalSeen.has(n)) return false; // مسح الرقم المكرر فوراً دون أي استثناءات عاطفية
                     globalSeen.add(n);
                     return true;
                 });
             });
 
-            // 3. تنظيف الذاكرة (Garbage Collection)
-            // إذا فقد الشخص كل أرقامه (بسبب التكرار) وليس لديه إيميل أو عنوان، احذفه بالكامل
+            // 3. تنظيف الذاكرة العميقة (Garbage Collection)
+            // إذا فقد الشخص كل أرقامه (بسبب مسح التكرار) وليس لديه إيميل أو عنوان، احذفه بالكامل لتنظيف الواجهة
             contacts = contacts.filter(c => 
                 c.isLabel ||
                 c.numbers.length > 0 || 
@@ -290,26 +289,26 @@ function deduplicateContactsGlobally() {
         function extractEmails(line) { return line.match(emailRegex) || []; }
 
         function extractAddressFromLine(line) {
-    if (/\t/.test(line)) return null;
-    if (/experian|transunion|equifax|phone record|bank account|household|wireless|landline|cellular|residence|historic|current|previous|voice line/i.test(line)) return null;
+            if (/\t/.test(line)) return null;
+            if (/experian|transunion|equifax|phone record|bank account|household|wireless|landline|cellular|residence|historic|current|previous|voice line/i.test(line)) return null;
 
-    // Rural Route addresses (e.g. RR BOX 8327)
-    if (/^RR\s+\w+\s+\d+$/i.test(line.trim())) return line.trim();
+            // Rural Route addresses (e.g. RR BOX 8327)
+            if (/^RR\s+\w+\s+\d+$/i.test(line.trim())) return line.trim();
 
-    const addressRegex = /\b\d+\s+(?:[A-Za-z0-9]+\s+)*?(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|Rdg|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
+            const addressRegex = /\b\d+\s+(?:[A-Za-z0-9]+\s+)*?(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|Rdg|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
 
-    const match = line.match(addressRegex);
-    if (!match) return null;
-    const addr = match[0].trim();
-    if (addr.split(/\s+/).length < 3) return null;
+            const match = line.match(addressRegex);
+            if (!match) return null;
+            const addr = match[0].trim();
+            if (addr.split(/\s+/).length < 3) return null;
 
-    // ضم المدينة والولاية لو موجودين في نفس السطر
-    const cityStateMatch = line.match(/,?\s*([A-Za-z\s]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)\s*$/);
-    if (cityStateMatch && !addr.includes(cityStateMatch[0].trim())) {
-        return addr + ', ' + cityStateMatch[1].trim() + ', ' + cityStateMatch[2] + ' ' + cityStateMatch[3];
-    }
-    return addr;
-}
+            // ضم المدينة والولاية لو موجودين في نفس السطر
+            const cityStateMatch = line.match(/,?\s*([A-Za-z\s]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)\s*$/);
+            if (cityStateMatch && !addr.includes(cityStateMatch[0].trim())) {
+                return addr + ', ' + cityStateMatch[1].trim() + ', ' + cityStateMatch[2] + ' ' + cityStateMatch[3];
+            }
+            return addr;
+        }
 
         function isValidContactName(name) {
             const lowerName = name.toLowerCase().trim();
@@ -348,29 +347,31 @@ function deduplicateContactsGlobally() {
                 if (!line) continue;
 
                 const cleanedLine = line.replace(/\s+\d{1,3}\s*$/, '').trim();
-                const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i);
                 const emails = extractEmails(line);
                 const addr = extractAddressFromLine(line);
                 const numbers = extractPhoneNumbers(line);
 
-                const isDegree = /\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(cleanedLine); if (nameMatch && (!cleanedLine.match(/\d/) || isDegree) && cleanedLine.length > 3 && !line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line)) {
-                   const potentialName = nameMatch[1].trim();
-                    const isDegreeLabel = /\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(potentialName) || /^associates?$/i.test(potentialName);
-                    if (isDegreeLabel || isValidContactName(potentialName)) {
-                        if (currentContact) newContacts.push(currentContact);
-                        const isDegreeLabel = /\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(potentialName) || /^associates?$/i.test(potentialName); currentContact = { name: potentialName, numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses], isLabel: isDegreeLabel };
-                        orphanNumbers = []; orphanEmails = []; orphanAddresses = [];
-                    } else {
-                        if (currentContact) {
-                            currentContact.emails.push(...emails);
-                            if (addr && !currentContact.addresses.includes(addr)) currentContact.addresses.push(addr);
-                            numbers.forEach(n => { if (!currentContact.numbers.includes(n)) currentContact.numbers.push(n); });
-                        } else {
-                            orphanEmails.push(...emails);
-                            if (addr && !orphanAddresses.includes(addr)) orphanAddresses.push(addr);
-                            numbers.forEach(n => { if (!orphanNumbers.includes(n)) orphanNumbers.push(n); });
-                        }
+                let potentialName = null;
+                let isDegreeLabel = false;
+
+                // 1. فحص هل السطر عبارة عن تصنيف (Label) مثل 1ST DEGREE أو ASSOCIATES
+                const labelMatch = cleanedLine.match(/^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i);
+                
+                if (labelMatch) {
+                    potentialName = cleanedLine; 
+                    isDegreeLabel = true;
+                } else {
+                    // 2. إذا لم يكن تصنيفاً، افحص هل هو اسم شخص عادي (يجب ألا يحتوي على أرقام)
+                    const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i);
+                    if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3 && !line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line)) {
+                        potentialName = nameMatch[1].trim();
                     }
+                }
+
+                if (potentialName && (isDegreeLabel || isValidContactName(potentialName))) {
+                    if (currentContact) newContacts.push(currentContact);
+                    currentContact = { name: potentialName, numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses], isLabel: isDegreeLabel };
+                    orphanNumbers = []; orphanEmails = []; orphanAddresses = [];
                 } else {
                     if (currentContact) {
                         currentContact.emails.push(...emails);
@@ -394,19 +395,24 @@ function deduplicateContactsGlobally() {
         function groupNumbersByNamesFromImage(text) {
             text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            const labelPattern = /^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i;
             const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i;
             const prefixedNamePattern = /(?:Relatives|Neighbors|Associates)\s+For:\s+([A-Z][A-Z\s]+[A-Z])/i;
             const allCapsNamePattern = /^([A-Z]{2,}(?:\s+[A-Z]{1,2}(?:\s+[A-Z]{2,})+))$/;
             let firstName = null;
-            for (const line of lines) { const m = line.match(prefixedNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } }
+            let isLabel = false;
+            
+            for (const line of lines) { const m = line.match(labelPattern); if (m) { firstName = m[0].trim(); isLabel = true; break; } }
+            if (!firstName) { for (const line of lines) { const m = line.match(prefixedNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } }
             if (!firstName) { for (const line of lines) { if (standaloneNamePattern.test(line) && !line.match(/\d/) && line.length > 3) { const m = line.match(standaloneNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } } }
             if (!firstName) { for (const line of lines) { if (line.match(/\d/) || /SSN|DOB|LexID|Gender|View|Setup|Report|Locator|Confidence|Carrier|Feedback|Landline|Wireless|Address|Phone|Subject|Information|Next|Steps|Relatives|Neighbors|Associates/i.test(line)) continue; const m = line.match(allCapsNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } }
             if (!firstName) { const m = text.match(/\b([A-Z]{2,}(?:\s+[A-Z]{1,2}\b)?(?:\s+[A-Z]{2,})+)/); if (m && isValidContactName(m[1])) firstName = m[1].trim(); }
+            
             const allEmails = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
             const allAddresses = text.split('\n').map(l => extractAddressFromLine(l.trim())).filter(Boolean);
             const allPhones = extractPhoneNumbers(text);
             if (allPhones.length === 0 && allEmails.length === 0) return [];
-            return [{ name: firstName || 'EXTRACTED DATA', numbers: [...new Set(allPhones)], emails: [...new Set(allEmails)], addresses: [...new Set(allAddresses)] }];
+            return [{ name: firstName || 'EXTRACTED DATA', numbers: [...new Set(allPhones)], emails: [...new Set(allEmails)], addresses: [...new Set(allAddresses)], isLabel: isLabel }];
         }
 
         function handleLookupFile(file) {
@@ -451,16 +457,16 @@ function deduplicateContactsGlobally() {
             if (contacts.length === 0) { container.innerHTML = ''; return; }
             const nameToDataMap = new Map();
             contacts.forEach(contact => {
-                if (!nameToDataMap.has(contact.name)) nameToDataMap.set(contact.name, { numbers: [], emails: [], addresses: [] });
+                if (!nameToDataMap.has(contact.name)) nameToDataMap.set(contact.name, { numbers: [], emails: [], addresses: [], isLabel: contact.isLabel });
                 const entry = nameToDataMap.get(contact.name);
                 contact.numbers.forEach(n => { if (!entry.numbers.includes(n)) entry.numbers.push(n); });
                 [...new Set(contact.emails || [])].forEach(e => { if (!entry.emails.includes(e)) entry.emails.push(e); });
                 [...new Set(contact.addresses || [])].forEach(a => { if (!entry.addresses.includes(a)) entry.addresses.push(a); });
             });
             let html = '';
-            nameToDataMap.forEach(({ numbers, emails, addresses }, name) => {
+            nameToDataMap.forEach(({ numbers, emails, addresses, isLabel }, name) => {
                 html += '<div class="contact-group" style="margin-bottom: 20px;">';
-                const contact = contacts.find(c => c.name === name); const isLabel = contact && contact.isLabel; const nameColor = 'rgb(51, 204, 255)'; const nameBorder = isLabel ? 'border-top: 1px solid #444; margin-top: 10px; padding-top: 10px;' : ''; html += `<div style="${nameBorder}"><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${isLabel ? '── ' + name + ' ──' : name}</span></div>`;
+                const nameColor = 'rgb(51, 204, 255)'; const nameBorder = isLabel ? 'border-top: 1px solid #444; margin-top: 10px; padding-top: 10px;' : ''; html += `<div style="${nameBorder}"><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${isLabel ? '── ' + name + ' ──' : name}</span></div>`;
                 addresses.forEach(addr => { html += `<div><span style="color: rgb(229, 158, 37);">${addr}</span></div>`; });
                 emails.forEach(email => { html += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>`; });
                 numbers.forEach((number) => {
@@ -534,15 +540,16 @@ function deduplicateContactsGlobally() {
             if (elementId === 'cleanedNumbers') {
                 const map = new Map();
                 contacts.forEach(c => {
-                    if (!map.has(c.name)) map.set(c.name, { n: [], e: [], a: [] });
+                    if (!map.has(c.name)) map.set(c.name, { n: [], e: [], a: [], isLabel: c.isLabel });
                     const entry = map.get(c.name);
                     c.numbers.forEach(num => { if (!entry.n.includes(num)) entry.n.push(num); });
                     (c.emails || []).forEach(em => { if (!entry.e.includes(em)) entry.e.push(em); });
                     (c.addresses || []).forEach(ad => { if (!entry.a.includes(ad)) entry.a.push(ad); });
                 });
-                map.forEach(({ n, e, a }, name) => {
-                    cleanHtml += `<div><span style="color: rgb(51, 204, 255); font-weight: bold; text-transform: uppercase;">${name}</span></div>\n`;
-                    plainText += name + '\n';
+                map.forEach(({ n, e, a, isLabel }, name) => {
+                    const nameColor = 'rgb(51, 204, 255)'; 
+                    cleanHtml += `<div><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${isLabel ? '── ' + name + ' ──' : name}</span></div>\n`;
+                    plainText += (isLabel ? '── ' + name + ' ──' : name) + '\n';
                     a.forEach(addr => { cleanHtml += `<div><span style="color: rgb(229, 158, 37);">${addr}</span></div>\n`; plainText += addr + '\n'; });
                     e.forEach(email => { cleanHtml += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>\n`; plainText += email + '\n'; });
                     n.forEach(num => {
