@@ -233,32 +233,21 @@
             crossContactDuplicates = new Map();
             const numberTotalCount = new Map();
 
-            // 1. إحصاء التكرارات الشاملة بدقة لتغذية قسم (Duplicates Found)
             contacts.forEach(contact => {
-                // إزالة التكرار الداخلي ضمن نفس الشخص أولاً لمنع التضخم الوهمي
                 contact.numbers = [...new Set(contact.numbers)];
-                
-                contact.numbers.forEach(n => {
-                    numberTotalCount.set(n, (numberTotalCount.get(n) || 0) + 1);
-                });
+                contact.numbers.forEach(n => { numberTotalCount.set(n, (numberTotalCount.get(n) || 0) + 1); });
             });
 
-            // تسجيل الأرقام المكررة في الخريطة
-            numberTotalCount.forEach((count, num) => {
-                if (count > 1) crossContactDuplicates.set(num, count);
-            });
+            numberTotalCount.forEach((count, num) => { if (count > 1) crossContactDuplicates.set(num, count); });
 
-            // 2. التجريد القاسي (Strict Deduplication): الرقم يعيش مرة واحدة فقط عند أول ظهور له
             contacts.forEach(contact => {
                 contact.numbers = contact.numbers.filter(n => {
-                    if (globalSeen.has(n)) return false; // مسح الرقم المكرر فوراً دون أي استثناءات عاطفية
+                    if (globalSeen.has(n)) return false;
                     globalSeen.add(n);
                     return true;
                 });
             });
 
-            // 3. تنظيف الذاكرة العميقة (Garbage Collection)
-            // إذا فقد الشخص كل أرقامه (بسبب مسح التكرار) وليس لديه إيميل أو عنوان، احذفه بالكامل لتنظيف الواجهة
             contacts = contacts.filter(c => 
                 c.isLabel ||
                 c.numbers.length > 0 || 
@@ -266,7 +255,6 @@
                 (c.addresses && c.addresses.length > 0)
             );
 
-            // 4. تحديث المصفوفة الكلية المرجعية
             allNumbers = Array.from(globalSeen);
         }
 
@@ -291,18 +279,14 @@
         function extractAddressFromLine(line) {
             if (/\t/.test(line)) return null;
             if (/experian|transunion|equifax|phone record|bank account|household|wireless|landline|cellular|residence|historic|current|previous|voice line/i.test(line)) return null;
-
-            // Rural Route addresses (e.g. RR BOX 8327)
             if (/^RR\s+\w+\s+\d+$/i.test(line.trim())) return line.trim();
 
             const addressRegex = /\b\d+\s+(?:[A-Za-z0-9]+\s+)*?(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|Rdg|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
-
             const match = line.match(addressRegex);
             if (!match) return null;
             const addr = match[0].trim();
             if (addr.split(/\s+/).length < 3) return null;
 
-            // ضم المدينة والولاية لو موجودين في نفس السطر
             const cityStateMatch = line.match(/,?\s*([A-Za-z\s]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)\s*$/);
             if (cityStateMatch && !addr.includes(cityStateMatch[0].trim())) {
                 return addr + ', ' + cityStateMatch[1].trim() + ', ' + cityStateMatch[2] + ' ' + cityStateMatch[3];
@@ -312,11 +296,13 @@
 
         function isValidContactName(name) {
             const lowerName = name.toLowerCase().trim();
-            if (/\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(name)) return false; if (/^(deceased|phone\s*#?\(s\)?|email\s*address|sources?)$/i.test(lowerName)) return false;
+            if (/\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(name)) return false; 
+            if (/^(deceased|phone\s*#?\(s\)?|email\s*address|sources?)$/i.test(lowerName)) return false;
             const invalidWords = ['repeat', '1st degree', '2nd degree', '3rd degree', 'associates', 'no work', 'wrong', 'do not call', 'dnc', 'not interested', 'voicemail', 'disconnected', 'busy', 'no answer', 'left message', 'spoke', 'callback', 'call back', 'texted', 'dead', 'sold', 'spanish', 'language', 'invalid', 'status', 'update', 'said', 'told', 'interested', 'machine', 'mailbox', 'message', 'none', 'n/a', 'na', 'not in service', 'no longer', 'business', 'out of service', 'does not work', 'stop', 'quit', 'opt out', 'remove', 'hang up', 'hung up', 'bad number', 'wrong number', 'not working', 'no english', 'english', 'not', 'dont', 'doesnt', 'work', 'worked', 'working', 'number', 'phone', 'contact', 'call', 'caller', 'cancel', 'cancelled', 'delete', 'deleted', 'unknown', 'fake', 'bogus', 'scam', 'spam', 'spamming', 'scammer', 'fraud', 'fraudulent', 'hello', 'owner', 'manager', 'tenant', 'landlord', 'resident', 'husband', 'wife', 'son', 'daughter', 'father', 'mother', 'brother', 'sister', 'uncle', 'aunt', 'cousin', 'nephew', 'niece', 'grandfather', 'grandmother', 'grandson', 'granddaughter', 'family', 'friend', 'neighbor', 'associate', 'relative', 'relatives', 'neighbors', 'associates', 'info', 'information', 'details', 'detail', 'data', 'record', 'records', 'file', 'files', 'account', 'accounts', 'profile', 'profiles', 'report', 'reports', 'document', 'documents', 'vm', 'lm', 'cb', 'ni', 'wn', 'bad', 'good', 'yes', 'no', 'true', 'false', 'same', 'diff', 'different', 'new', 'old', 'current', 'previous', 'historic', 'voice', 'line', 'cell', 'mobile', 'landline', 'wireless', 'telephone', 'tel', 'fax', 'email', 'address', 'addr', 'location', 'place', 'property', 'properties', 'home', 'house', 'apartment', 'apt', 'suite', 'ste', 'unit', 'room', 'rm', 'building', 'bldg', 'floor', 'fl', 'level', 'lvl', 'street', 'st', 'avenue', 'ave', 'boulevard', 'blvd', 'drive', 'dr', 'road', 'rd', 'lane', 'ln', 'way', 'court', 'ct', 'terrace', 'ter', 'parkway', 'pkwy', 'highway', 'hwy', 'circle', 'cir', 'loop', 'trail', 'trl', 'row', 'square', 'sq', 'broadway', 'crossing', 'xing', 'alley', 'left vm', 'lm on', 'did not answer', 'hanged up', 'not int', 'no int', 'take me off', 'remove me', 'wrong num', 'wrong person', 'wrong contact', 'bad num', 'mailbox full', 'vm full', 'voicemail full', 'not setup', 'not set up', 'busy signal', 'fast busy', 'fax machine', 'modem', 'screeching', 'dead air', 'silence', 'dropped', 'dropped call', 'call dropped', 'call later', 'try again', 'try later', 'call tomorrow', 'appointment', 'appt', 'schedule', 'scheduled', 'meeting', 'follow up', 'lead', 'prospect', 'opportunity', 'deal', 'client', 'customer', 'patient', 'buyer', 'seller', 'renter', 'leaser', 'lessee', 'lessor', 'broker', 'agent', 'realtor', 'real estate', 'realty', 'property management', 'pm', 'llc', 'inc', 'corp', 'corporation', 'company', 'co', 'ltd', 'limited', 'group', 'grp', 'partners', 'enterprises', 'ent', 'holdings', 'investments', 'inv', 'trust', 'fund', 'estate of', 'heirs of', 'care of', 'attn', 'attention'];
             for (let word of invalidWords) { if (new RegExp('\\b' + word + '\\b', 'i').test(lowerName)) return false; }
             const wordsCount = lowerName.split(/\s+/).length;
-            if (wordsCount > 4) return false;
+            // التعديل المعماري الهام: السماح بعدد كلمات أكبر لاستيعاب لواحق العمر مثل AGE 72
+            if (wordsCount > 6) return false;
             if (wordsCount === 1 && lowerName.length < 3) return false;
             return true;
         }
@@ -346,7 +332,8 @@
                 const line = lines[i].trim();
                 if (!line) continue;
 
-                const cleanedLine = line.replace(/\s+\d{1,3}\s*$/, '').trim();
+                // تم إزالة البتر العشوائي للأرقام هنا
+                const cleanedLine = line.trim();
                 const emails = extractEmails(line);
                 const addr = extractAddressFromLine(line);
                 const numbers = extractPhoneNumbers(line);
@@ -354,16 +341,16 @@
                 let potentialName = null;
                 let isDegreeLabel = false;
 
-                // 1. فحص هل السطر عبارة عن تصنيف (Label) مثل 1ST DEGREE أو ASSOCIATES
                 const labelMatch = cleanedLine.match(/^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i);
                 
                 if (labelMatch) {
                     potentialName = cleanedLine; 
                     isDegreeLabel = true;
                 } else {
-                    // 2. إذا لم يكن تصنيفاً، افحص هل هو اسم شخص عادي (يجب ألا يحتوي على أرقام)
-                    const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i);
-                    if (nameMatch && !cleanedLine.match(/\d/) && cleanedLine.length > 3 && !line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line)) {
+                    // التعديل المعماري: السماح بالأقواس () وعلامة & داخل تركيبة الاسم
+                    const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-()&]+?(?:\s*(?:AGE|-)?\s*\d{1,3})?)$/i);
+                    // السماح بالأرقام في السطر طالما أنه لا يحتوي على رقم هاتف كامل
+                    if (nameMatch && cleanedLine.length > 3 && !line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line) && numbers.length === 0) {
                         potentialName = nameMatch[1].trim();
                     }
                 }
@@ -396,15 +383,21 @@
             text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
             const labelPattern = /^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i;
-            const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-]+[A-Z])\s*$/i;
-            const prefixedNamePattern = /(?:Relatives|Neighbors|Associates)\s+For:\s+([A-Z][A-Z\s]+[A-Z])/i;
+            
+            // التعديل المعماري: تحديث الأنماط للسماح بالأقواس وعلامات الربط في صور الـ OCR
+            const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-()&]+?(?:\s*(?:AGE|-)?\s*\d{1,3})?)$/i;
+            const prefixedNamePattern = /(?:Relatives|Neighbors|Associates)\s+For:\s+([A-Z][A-Z\s,.'\-()&]+)/i;
             const allCapsNamePattern = /^([A-Z]{2,}(?:\s+[A-Z]{1,2}(?:\s+[A-Z]{2,})+))$/;
+            
             let firstName = null;
             let isLabel = false;
             
             for (const line of lines) { const m = line.match(labelPattern); if (m) { firstName = m[0].trim(); isLabel = true; break; } }
             if (!firstName) { for (const line of lines) { const m = line.match(prefixedNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } }
-            if (!firstName) { for (const line of lines) { if (standaloneNamePattern.test(line) && !line.match(/\d/) && line.length > 3) { const m = line.match(standaloneNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } } }
+            
+            // السماح بوجود العمر طالما السطر لا يمثل رقم هاتف
+            if (!firstName) { for (const line of lines) { if (standaloneNamePattern.test(line) && line.length > 3 && extractPhoneNumbers(line).length === 0) { const m = line.match(standaloneNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } } }
+            
             if (!firstName) { for (const line of lines) { if (line.match(/\d/) || /SSN|DOB|LexID|Gender|View|Setup|Report|Locator|Confidence|Carrier|Feedback|Landline|Wireless|Address|Phone|Subject|Information|Next|Steps|Relatives|Neighbors|Associates/i.test(line)) continue; const m = line.match(allCapsNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } }
             if (!firstName) { const m = text.match(/\b([A-Z]{2,}(?:\s+[A-Z]{1,2}\b)?(?:\s+[A-Z]{2,})+)/); if (m && isValidContactName(m[1])) firstName = m[1].trim(); }
             
