@@ -293,7 +293,7 @@
 
             if (/^RR\s+\w+\s+\d+$/i.test(line.trim())) return line.trim();
 
-            const addressRegex = /\b\d+\s+(?:[A-Za-z0-9]+\s+)*?(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|Rdg|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
+            const addressRegex = /\b\d+\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|Rdg|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
 
             const match = line.match(addressRegex);
             if (!match) return null;
