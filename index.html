@@ -293,15 +293,19 @@
 
             if (/^RR\s+\w+\s+\d+$/i.test(line.trim())) return line.trim();
 
-            const addressRegex = /\b\d+\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|Rdg|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
+            const addressRegex = /\b\d+\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|Rdg|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+[A-Za-z0-9]{1,2}\b)?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
 
             const match = line.match(addressRegex);
             if (!match) return null;
             const addr = match[0].trim();
-            if (addr.split(/\s+/).length < 3) return null;
+            // number + street word is already a real address ("100 BROADWAY")
+            if (addr.split(/\s+/).length < 2) return null;
 
-            const cityStateMatch = line.match(/,?\s*([A-Za-z\s]+),\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)\s*$/);
-            if (cityStateMatch && !addr.includes(cityStateMatch[0].trim())) {
+            // City/state only in what FOLLOWS the address: matching the whole
+            // line let the city group run back into the street name.
+            const rest = line.slice(match.index + match[0].length);
+            const cityStateMatch = rest.match(/^[,\s]*([A-Za-z][A-Za-z\s]*?)\s*,\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)\s*$/);
+            if (cityStateMatch) {
                 return addr + ', ' + cityStateMatch[1].trim() + ', ' + cityStateMatch[2] + ' ' + cityStateMatch[3];
             }
             return addr;
