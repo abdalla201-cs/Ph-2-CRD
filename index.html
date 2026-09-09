@@ -293,7 +293,20 @@
 
             if (/^RR\s+\w+\s+\d+$/i.test(line.trim())) return line.trim();
 
-            const addressRegex = /\b\d+(?:-\d+)?\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Blvd|Pkwy|Hwy|Trl|Rdg|(?<!\w)St(?!\w)|(?<!\w)Ave(?!\w)|(?<!\w)Dr(?!\w)|(?<!\w)Rd(?!\w)|(?<!\w)Ln(?!\w)|(?<!\w)Ct(?!\w)|(?<!\w)Pl(?!\w)|(?<!\w)Sq(?!\w))\.?(?:\s+[A-Za-z0-9]{1,2}\b)?(?:\s+(?:UNIT|APT|SUITE|STE|#|ROOM|RM|FLOOR|FL)\s*[A-Za-z0-9]+)?/i;
+            // Every word here has to end where the word in the text ends, or it
+            // matches inside a longer one and swallows the city — which then
+            // takes the state and zip with it. Two real cases: "FLUSHING" was
+            // read as the unit marker "FL" plus a floor number of "USHING", and
+            // "RIDGEWOOD" as the street type "RIDGE" plus a leftover "WOOD".
+            // Hence (?!\w) after the street types and (?![A-Za-z]) after the
+            // unit markers, which still allows "APT2" while refusing "FLUSHING".
+            //
+            // The unit group repeats: "338 15TH ST APT 2 APT 2" appears in the
+            // source data, and a single unit stopped the match dead there.
+            //
+            // The one-or-two character slot is for "1107 66TH ROAD C". It has to
+            // step over a unit marker or it takes the FL out of "FL 3".
+            const addressRegex = /\b\d+(?:-\d+)?\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Crescent|Blvd|Pkwy|Hwy|Trl|Rdg|Cres|(?<!\w)St|(?<!\w)Ave|(?<!\w)Dr|(?<!\w)Rd|(?<!\w)Ln|(?<!\w)Ct|(?<!\w)Pl|(?<!\w)Sq)(?!\w)\.?(?:\s+(?!(?:UNIT|APT|STE|RM|FL)(?![A-Za-z]))[A-Za-z0-9]{1,2}\b)?(?:\s+(?:(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z])|#)\s*[A-Za-z0-9]+)*/i;
 
             const match = line.match(addressRegex);
             if (!match) return null;
@@ -304,7 +317,10 @@
             // City/state only in what FOLLOWS the address: matching the whole
             // line let the city group run back into the street name.
             const rest = line.slice(match.index + match[0].length);
-            const cityStateMatch = rest.match(/^[,\s]*([A-Za-z][A-Za-z\s]*?)\s*,\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)\s*$/);
+            // Four or five digits: the source data carries truncated zips
+            // ("NEW YORK, NY 1028"), and demanding five left the city unmatched,
+            // so the state and zip were dropped from the address entirely.
+            const cityStateMatch = rest.match(/^[,\s]*([A-Za-z][A-Za-z\s]*?)\s*,\s*([A-Z]{2})\s*(\d{4,5}(?:-\d{4})?)\s*$/);
             if (cityStateMatch) {
                 return addr + ', ' + cityStateMatch[1].trim() + ', ' + cityStateMatch[2] + ' ' + cityStateMatch[3];
             }
@@ -331,7 +347,9 @@
             const mergedLines = [];
             for (let i = 0; i < rawLines.length; i++) {
                 const line = rawLines[i].trim();
-                if (/^[A-Z][A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?$/.test(line) && mergedLines.length > 0) {
+                // Four or five digits here too, or a truncated zip stops the
+                // city line joining the street above it and it stands alone.
+                if (/^[A-Z][A-Za-z\s]+,\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/.test(line) && mergedLines.length > 0) {
                     mergedLines[mergedLines.length - 1] = mergedLines[mergedLines.length - 1].trim() + ' ' + line;
                 } else {
                     mergedLines.push(line);
