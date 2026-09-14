@@ -306,7 +306,7 @@
             //
             // The one-or-two character slot is for "1107 66TH ROAD C". It has to
             // step over a unit marker or it takes the FL out of "FL 3".
-            const addressRegex = /\b\d+(?:-\d+)?\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Crescent|Blvd|Pkwy|Hwy|Trl|Rdg|Cres|(?<!\w)St|(?<!\w)Ave|(?<!\w)Dr|(?<!\w)Rd|(?<!\w)Ln|(?<!\w)Ct|(?<!\w)Pl|(?<!\w)Sq)(?!\w)\.?(?:\s+(?!(?:UNIT|APT|STE|RM|FL)(?![A-Za-z]))[A-Za-z0-9]{1,2}\b)?(?:\s+(?:(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z])|#)\s*[A-Za-z0-9]+)*/i;
+            const addressRegex = /\b\d+(?:-\d+)?\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Crescent|Path|Walk|Run|Pass|Bend|Cove|Point|Hill|Heights|Knoll|Glen|Manor|Turnpike|Expressway|Plaza|Concourse|Gardens|Landing|Crossing|Trace|Alley|Estates|Blvd|Pkwy|Hwy|Trl|Rdg|Cres|Tpke|Expy|Plz|Gdns|Lndg|Xing|Trce|Aly|Ests|(?<!\w)Cv|(?<!\w)Pt|(?<!\w)Hl|(?<!\w)Hts|(?<!\w)Gln|(?<!\w)Mnr|(?<!\w)Ter|(?<!\w)St|(?<!\w)Ave|(?<!\w)Dr|(?<!\w)Rd|(?<!\w)Ln|(?<!\w)Ct|(?<!\w)Pl|(?<!\w)Sq)(?!\w)\.?(?:\s+(?!(?:UNIT|APT|STE|RM|FL)(?![A-Za-z]))[A-Za-z0-9]{1,2}\b)?(?:\s+(?:(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z])|#)\s*[A-Za-z0-9]+)*/i;
 
             const match = line.match(addressRegex);
             if (!match) return null;
