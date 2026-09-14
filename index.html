@@ -320,7 +320,12 @@
             // Four or five digits: the source data carries truncated zips
             // ("NEW YORK, NY 1028"), and demanding five left the city unmatched,
             // so the state and zip were dropped from the address entirely.
-            const cityStateMatch = rest.match(/^[,\s]*([A-Za-z][A-Za-z\s]*?)\s*,\s*([A-Z]{2})\s*(\d{4,5}(?:-\d{4})?)\s*$/);
+            // The comma after the city is optional — the source has both
+            // "BRONX, NY 10469" and "BRONX NY 10469". The result is always
+            // rebuilt WITH the comma, so either spelling comes out the same.
+            // The lazy city group stops where two capitals followed by a zip
+            // begin, so "SANTA BARBARA CA 93103" still splits after BARBARA.
+            const cityStateMatch = rest.match(/^[,\s]*([A-Za-z][A-Za-z\s]*?)\s*,?\s*([A-Z]{2})\s*(\d{4,5}(?:-\d{4})?)\s*$/);
             if (cityStateMatch) {
                 return addr + ', ' + cityStateMatch[1].trim() + ', ' + cityStateMatch[2] + ' ' + cityStateMatch[3];
             }
@@ -349,7 +354,8 @@
                 const line = rawLines[i].trim();
                 // Four or five digits here too, or a truncated zip stops the
                 // city line joining the street above it and it stands alone.
-                if (/^[A-Z][A-Za-z\s]+,\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/.test(line) && mergedLines.length > 0) {
+                // comma optional here too, or "BRONX NY 10469" never joins its street
+                if (/^[A-Z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/.test(line) && mergedLines.length > 0) {
                     mergedLines[mergedLines.length - 1] = mergedLines[mergedLines.length - 1].trim() + ' ' + line;
                 } else {
                     mergedLines.push(line);
