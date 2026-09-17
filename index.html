@@ -325,9 +325,30 @@
             // rebuilt WITH the comma, so either spelling comes out the same.
             // The lazy city group stops where two capitals followed by a zip
             // begin, so "SANTA BARBARA CA 93103" still splits after BARBARA.
-            const cityStateMatch = rest.match(/^[,\s]*([A-Za-z][A-Za-z\s]*?)\s*,?\s*([A-Z]{2})\s*(\d{4,5}(?:-\d{4})?)\s*$/);
+            const CITY_STATE_ZIP = /^[,\s]*([A-Za-z][A-Za-z\s]*?)\s*,?\s*([A-Z]{2})\s*(\d{4,5}(?:-\d{4})?)\s*$/;
+            const cityStateMatch = rest.match(CITY_STATE_ZIP);
             if (cityStateMatch) {
                 return addr + ', ' + cityStateMatch[1].trim() + ', ' + cityStateMatch[2] + ' ' + cityStateMatch[3];
+            }
+
+            // Greedy overshoots when the CITY ends in a street word: "66 MEADOW
+            // LN ROSLYN HEIGHTS, NY 11577" was read as a street ending in
+            // HEIGHTS, leaving ", NY 11577" with no city — so state and zip were
+            // dropped. Only when that happens (the remainder is a bare state and
+            // zip — or a bare zip, when the two-letter slot after the street
+            // word has swallowed the state as well), back the match up one word
+            // at a time until what follows it reads as a city again.
+            if (/^[,\s]*(?:[A-Z]{2}\s*)?\d{4,5}(?:-\d{4})?\s*$/.test(rest)) {
+                let end = match.index + match[0].length;
+                for (;;) {
+                    const cut = line.slice(match.index, end).replace(/\s+\S+\s*$/, '');
+                    if (!cut || cut === line.slice(match.index, end)) break;
+                    end = match.index + cut.length;
+                    const m2 = cut.match(addressRegex);
+                    if (!m2 || m2.index !== 0 || m2[0].length !== cut.length) continue;
+                    const again = line.slice(end).match(CITY_STATE_ZIP);
+                    if (again) return cut.trim() + ', ' + again[1].trim() + ', ' + again[2] + ' ' + again[3];
+                }
             }
             return addr;
         }
