@@ -270,8 +270,8 @@
         }
 
         function extractPhoneNumbers(text) {
-            text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
-            const phonePattern = /(?:\+?1[-.\s]?)?\(?[0-9OoIl]{3}\)?[-.\s]?[0-9OoIl]{3}[-.\s]?[0-9OoIl]{4}/gi;
+            text = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '');
+            const phonePattern = /(?:\+?1[-.\s]?)?\(?[0-9OoIl]{3}\)?[-.\s]{0,2}[0-9OoIl]{3}[-.\s]{0,2}[0-9OoIl]{4}/gi;
             let matches = text.match(phonePattern) || [];
             const noSpaceText = text.replace(/\s+/g, '');
             const scatteredGroups = noSpaceText.match(/[0-9OoIl]{10,}/gi) || [];
@@ -367,7 +367,7 @@
         }
 
         function groupNumbersByNames(text) {
-            text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
+            text = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '');
 
             const rawLines = text.split('\n');
             const mergedLines = [];
@@ -453,7 +453,7 @@
         }
 
         function groupNumbersByNamesFromImage(text) {
-            text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
+            text = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '');
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
             const labelPattern = /^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i;
             
@@ -573,7 +573,7 @@
 
         function processText() {
             let text = document.getElementById('textInput').value.trim();
-            text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
+            text = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '');
             if (!text) return showNotification('Enter text to process', 'error');
             const newOnes = groupNumbersByNames(text);
             newOnes.forEach(nc => {
