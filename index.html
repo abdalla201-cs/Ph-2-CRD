@@ -366,6 +366,70 @@
             return true;
         }
 
+                // Is this line a person (or a section label)? Ported from the Evernote
+        // extension, where it was worked out against his real notes. The plain
+        // reject-list test threw away real people whose SURNAME happens to be a
+        // rejected word ("JENNIFER YOUNG SON", "CANCEL, BRIANA"), names carrying a
+        // note after a dash ("RICCIO, RAYMOND L - dead"), generational suffixes
+        // ("MCFARLANE, JAMES E 3rd", mistaken for a degree label) — and took a stray
+        // provider fragment ("Experian Gateway") for a person. Their numbers then fell
+        // under the wrong name or under "EXTRACTED DATA".
+        function looksLikeName(text) {
+            const t = String(text || '').replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '').trim();
+            if (!t || t.includes('@')) return false;
+            if (extractPhoneNumbers(t).length > 0) return false;
+            if (/^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i.test(t)) return true;
+            if (/(phone\s*#|\bsources?\b|phone\s*type|email\s*address\s*:)/i.test(t)) return false;
+            // nothing but provider / type words: "Experian", "Experian Gateway"
+            const SOURCE_WORDS = /\b(experian|transunion|equifax|lexisnexis|gateway|credit bureau|bank account|phone record|motor vehicle|work affiliations|professional licenses|new movers|household|utility|voter|residence|residential|landline|land line|voice line|voip|wireless|historic|historical|current|previous)\b/gi;
+            if (t.replace(SOURCE_WORDS, ' ').replace(/[^A-Za-z]+/g, '').length === 0) return false;
+
+            const NAME_SHAPE = /^[A-Za-z][A-Za-z\s,.'()\-&]+$/;
+            const SUFFIX_RE = /[,\s]+(?:jr|sr|ii|iii|iv|2nd|3rd|4th|5th)\.?$/i;
+            const valid = (s) => isValidContactName(s);
+
+            // the name proper is the line minus any note after a dash
+            const head = t.split(/\s+[-\u2013\u2014]\s+/)[0].trim();
+            const forms = [head];
+
+            // "SURNAME, GIVEN": judge the given part alone when the surname is plain
+            // letters, so a surname that is also a rejected word does not sink a person
+            const comma = head.indexOf(',');
+            if (comma > 0) {
+                const surname = head.slice(0, comma).trim();
+                const given = head.slice(comma + 1).trim();
+                if (/^[A-Za-z][A-Za-z'\-]*(?:\s+[A-Za-z][A-Za-z'\-]*){0,2}$/.test(surname) && given.length > 1) forms.push(given);
+            }
+            forms.slice().forEach(f => {
+                const bare = f.replace(SUFFIX_RE, '').trim();
+                if (bare !== f && bare.length > 1) forms.push(bare);
+            });
+
+            // last resort: drop the individual words the reject list objects to and see
+            // whether a name remains — only on a line written like a name (no digits,
+            // every real word capitalised)
+            const CONNECTOR_RE = /^(?:aka|van|von|der|den|del|dos|bin|ibn|nee)$/i;
+            const looksTyped = (f) => !/\d/.test(f) && f.split(/\s+/).every(part => {
+                const w = part.replace(/[^A-Za-z'\-]/g, '');
+                return w.length <= 2 || CONNECTOR_RE.test(w) || /^[A-Z]/.test(w);
+            });
+            forms.filter(looksTyped).forEach(f => {
+                let keptRealWord = false;
+                const kept = f.split(/\s+/).filter(part => {
+                    const word = part.replace(/[^A-Za-z'\-]/g, '');
+                    if (!word) return false;
+                    if (word.length <= 2) return true;
+                    if (!valid(word)) return false;
+                    keptRealWord = true;
+                    return true;
+                });
+                if (keptRealWord && kept.length) forms.push(kept.join(' '));
+            });
+
+            return [t].concat(forms).some(c => NAME_SHAPE.test(c) && valid(c));
+        }
+
+
         function groupNumbersByNames(text) {
             text = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '');
 
@@ -413,14 +477,13 @@
                     isDegreeLabel = true;
                 } else {
                     // التعديل المعماري: السماح بالأقواس وعلامة الربط والعمر
-                    const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-()&]+?(?:\s*(?:AGE|-)?\s*\d{1,3})?)$/i);
-                    
-                    if (nameMatch && cleanedLine.length > 3 && !line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line) && numbers.length === 0) {
-                        potentialName = nameMatch[1].trim();
-                    }
+                    // judged as the Evernote extension judges a name line — see looksLikeName
+            if (!line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line) && numbers.length === 0 && looksLikeName(cleanedLine)) {
+                potentialName = cleanedLine;
+            }
                 }
 
-                if (potentialName && (isDegreeLabel || isValidContactName(potentialName))) {
+                if (potentialName) {
                     if (currentContact) newContacts.push(currentContact);
                     
                     // التعديل المعماري: عزل البيانات اليتيمة بدلاً من توريثها
