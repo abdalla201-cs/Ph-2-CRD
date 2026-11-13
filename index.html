@@ -376,6 +376,16 @@
         // under the wrong name or under "EXTRACTED DATA".
         function looksLikeName(text) {
             const t = String(text || '').replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '').trim();
+            // A name followed by an age — "MARIA SANTOS AGE 67", "MARIA SANTOS 67",
+            // "SANTOS, MARIA, Age 67", "MARIA SANTOS (AGE 67)". The web tool's old
+            // name test accepted a trailing age; the stricter one ported from the
+            // extension did not, and the person's numbers fell under "EXTRACTED DATA"
+            // (2026-11-13). Judge the name without the age; the whole line is still
+            // what gets written. Only when what is left has no digit at all, so an
+            // address or a date ("ME 11/13") never passes for a name.
+            const aged = t.replace(/[,\s]*\(?\s*(?:age\s*:?\s*)?\d{1,3}\s*\)?\s*$/i, '').trim();
+            if (aged !== t && /[A-Za-z]{2}/.test(aged) && !/\d/.test(aged) &&
+        !/\b(?:p\.?\s*o\.?\s*box|box|apt|unit|suite|ste|floor|fl|room|rm|lot|bldg|building|route|rte|hwy)\b/i.test(aged)) return looksLikeName(aged);
             if (!t || t.includes('@')) return false;
             if (extractPhoneNumbers(t).length > 0) return false;
             if (/^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i.test(t)) return true;
