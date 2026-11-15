@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Number Processor - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- the pre-write guard, the same file the Evernote extension ships -->
+    <script src="guard.js"></script>
+    
+    <style>
+        :root {
+            --bg-main: #121212;
+            --bg-card: #1e1e1e;
+            --bg-input: #27272a;
+            --border-color: #3f3f46;
+            --accent-blue: #33ccff;
+            --accent-blue-hover: #00ace6;
+            --accent-red: #ff0000;
+            --accent-red-hover: #cc0000;
+            --text-main: #e4e4e7;
+            --text-muted: #a1a1aa;
+            --success-green: #18a841; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container { max-width: 1500px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+        .top-panel { display: grid; grid-template-columns: 1fr 1.5fr 300px; gap: 20px; align-items: stretch; }
+        .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+        @media (max-width: 1100px) {
+            .top-panel { grid-template-columns: 1fr 1fr; }
+            .top-panel > :last-child { grid-column: span 2; }
+            .results-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .top-panel { grid-template-columns: 1fr; }
+            .top-panel > :last-child { grid-column: 1; }
+            .results-grid { grid-template-columns: 1fr; }
+        }
+
+        .card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; }
+        .card h3 { font-size: 1.05rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+        button { font-family: inherit; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; font-size: 0.9rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+        .btn-primary { background-color: var(--accent-blue); color: #121212; padding: 12px 20px; width: 100%; margin-top: auto; }
+        .btn-primary:hover { background-color: var(--accent-blue-hover); }
+        .btn-danger { background-color: var(--accent-red); color: #fff; padding: 12px 20px; width: 100%; }
+        .btn-danger:hover { background-color: var(--accent-red-hover); }
+        .btn-secondary { background-color: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 15px; }
+        .btn-secondary:hover { background-color: #333333; border-color: #555; }
+        .copy-btn { background-color: #333333; color: var(--text-main); padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; border: 1px solid var(--border-color); }
+        .copy-btn:hover { background-color: #444; color: #fff; }
+
+        .upload-area { background-color: var(--bg-input); border: 1px dashed var(--border-color); border-radius: 8px; padding: 30px 15px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s ease; min-height: 120px; margin-bottom: 15px; }
+        .upload-area:hover, .upload-area.dragover { border-color: var(--accent-blue); background-color: rgba(51, 204, 255, 0.05); }
+        .file-input { display: none; }
+
+        .textarea { background-color: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 8px; padding: 15px; width: 100%; flex-grow: 1; resize: none; font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; line-height: 1.5; outline: none; transition: border-color 0.2s; margin-bottom: 15px; min-height: 180px; }
+        .textarea:focus { border-color: var(--accent-blue); }
+        .textarea::placeholder { color: var(--text-muted); }
+
+        .input-group { display: flex; gap: 10px; }
+        .input-group button { flex: 1; }
+
+        .api-input { width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 0.8rem; outline: none; margin-bottom: 10px; }
+        .api-input:focus { border-color: var(--accent-blue); }
+
+        .stats-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; flex-grow: 1; }
+        .stat-item { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-input); padding: 12px 16px; border-radius: 8px; font-size: 0.9rem; color: var(--text-muted); border: 1px solid var(--border-color); }
+        .stat-item .val { color: #fff; font-weight: 700; font-size: 1rem; }
+
+        .result-content { background-color: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; height: 380px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 0.95rem; line-height: 1.5; }
+        .result-content::-webkit-scrollbar { width: 6px; }
+        .result-content::-webkit-scrollbar-thumb { background-color: #444; border-radius: 4px; }
+
+        .contact-group { margin-bottom: 15px; }
+        .contact-name { font-weight: 700; color: var(--accent-blue); margin-bottom: 4px; font-size: 0.9rem; text-transform: uppercase; }
+        .contact-numbers { margin-top: 0px !important; }
+        .contact-numbers div, .number-list div, .duplicate-item { padding: 4px 0; }
+        .duplicate-item { display: flex; justify-content: space-between; }
+        .duplicate-count { color: var(--text-muted); font-size: 0.8rem; }
+
+        .notification { position: fixed; top: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; color: #fff; font-weight: 600; font-size: 0.85rem; z-index: 1000; transform: translateX(120%); transition: transform 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .notification.show { transform: translateX(0); }
+        .notification.success { background-color: var(--success-green); }
+        .notification.error { background-color: var(--accent-red); }
+
+        .progress-container { display: none; margin-top: 10px; background: var(--bg-input); border-radius: 8px; padding: 12px; border: 1px solid var(--border-color); }
+        .progress-bar { width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+        .progress-fill { height: 100%; background: var(--accent-blue); width: 0%; transition: width 0.3s ease; }
+        .progress-text { text-align: center; font-size: 0.75rem; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <div class="container" id="appContainer">
+        
+        <div class="top-panel">
+            <div class="card">
+                <h3><span>🖼️ OCR Image Upload</span></h3>
+                <div style="margin-bottom:15px; background:rgba(0,0,0,0.2); border-radius:8px; padding:15px; border:1px solid rgba(255,255,255,0.05);">
+                    <h4 style="font-size:0.85rem; color:var(--accent-blue); margin-bottom:10px;">⚙️ Gemini AI Settings</h4>
+                    <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🧠 Select Model</label>
+                    <select id="aiModelSelect" onchange="saveModelSelection(this.value)" style="width:100%; background:var(--bg-input); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; color:#fff; font-size:0.85rem; outline:none; margin-bottom:12px; appearance: auto; cursor:pointer;">
+                        <option value="gemini-2.0-flash" style="background:#1e1e1e;">🔥 Gemini 2.0 Flash (Default)</option>
+                        <option value="gemini-1.5-flash" style="background:#1e1e1e;">✅ Gemini 1.5 Flash</option>
+                    </select>
+                    <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🔑 API Key <span style="color:var(--accent-red);">(Required for AI OCR)</span></label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key..." class="api-input" style="margin-bottom:0;" oninput="saveGeminiKey(this.value)" />
+                        <button class="btn-secondary" onclick="testApiKey()" style="padding: 8px; margin: 0; min-width: 40px;" title="فحص المفتاح">🧪</button>
+                        <span id="geminiStatus" style="font-size:0.75rem; white-space:nowrap; opacity:0.75;">⬜ Not set</span>
+                    </div>
+                </div>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <p style="color: var(--text-muted); font-size: 0.85rem;">Drag images here or click to browse</p>
+                    <input type="file" id="fileInput" class="file-input" multiple accept="image/*,.pdf">
+                </div>
+                <div class="input-group">
+                    <button class="btn-secondary" onclick="document.getElementById('fileInput').click()">📁 Choose Files</button>
+                    <button class="btn-secondary" onclick="pasteFromClipboard()">📋 Paste Image</button>
+                </div>
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                    <div class="progress-text" id="progressText">Processing...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><span>✍️ Text Input</span></h3>
+                <textarea class="textarea" id="textInput" placeholder="Paste data containing names, addresses, emails..."></textarea>
+                <button class="btn-primary" onclick="processText()">⚡ Filter & Extract Data</button>
+            </div>
+
+            <div class="card">
+                <h3><span>📊 Stats & Auto Checker</span></h3>
+                <div class="stats-list" style="margin-bottom: 10px;">
+                    <div class="stat-item"><span>Total Instances:</span> <span class="val" id="totalCount">0</span></div>
+                    <div class="stat-item"><span>Unique Numbers:</span> <span class="val" id="uniqueCount">0</span></div>
+                    <div class="stat-item"><span>Lookup Entries:</span> <span class="val" id="lookupCount">0</span></div>
+                </div>
+                <div style="margin-top: 5px; margin-bottom: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <button class="btn-secondary" onclick="copyForWaChecker()" style="width: 100%; margin-bottom: 10px;">📋 Copy for WA Extension</button>
+                    <input type="file" id="lookupFileInput" class="file-input" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                    <div class="upload-area" id="lookupUploadArea" style="min-height: 50px; padding: 10px; margin-bottom: 0;" onclick="document.getElementById('lookupFileInput').click()">
+                        <p style="font-size: 0.8rem; color: var(--text-muted); pointer-events: none;">📂 Drop WA Checker Excel</p>
+                    </div>
+                </div>
+                <button class="btn-danger" onclick="clearSession()">🗑️ Clear Session</button>
+            </div>
+        </div>
+
+        <div class="results-grid">
+            <div class="card">
+                <h3><span>📋 Results (by Name)</span> <button class="copy-btn" onclick="copyToClipboard('cleanedNumbers')">Copy</button></h3>
+                <div class="result-content" id="cleanedNumbers"></div>
+            </div>
+            <div class="card">
+                <h3><span>🇺🇸 US American Format</span> <button class="copy-btn" onclick="copyToClipboard('americanNumbers')">Copy</button></h3>
+                <div class="result-content" id="americanNumbers"></div>
+            </div>
+            <div class="card">
+                <h3><span>🔄 Duplicates Found</span> <button class="copy-btn" onclick="copyToClipboard('duplicateNumbers')">Copy</button></h3>
+                <div class="result-content" id="duplicateNumbers"></div>
+            </div>
+        </div>
+
+        <div id="debugPanel" style="display:none; margin-top:20px; background:var(--bg-input); padding:20px; border-radius:10px; border:1px solid var(--border-color);">
+            <h3 style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; font-size: 0.95rem;">
+                🐛 API Status / Raw Output
+                <button class="copy-btn" onclick="document.getElementById('debugPanel').style.display='none'">Hide</button>
+            </h3>
+            <textarea id="debugOutput" style="width:100%; height:150px; background:var(--bg-main); color:var(--success-green); font-family:monospace; font-size:0.8rem; border:1px solid var(--border-color); border-radius:8px; padding:10px; resize:vertical;" readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        const allowedDomains = ["thunderous-begonia-f0035c.netlify.app", "abdalla201-cs.github.io", "localhost", "127.0.0.1", ""];
+        if (!allowedDomains.includes(window.location.hostname) && window.location.hostname !== "") {
+            document.body.innerHTML = "<div style='display:flex; justify-content:center; align-items:center; height:100vh; background:#121212; color:#ef4444; font-family:sans-serif;'><h2>🚫 Unauthorized Access. This tool is domain-locked.</h2></div>";
+            throw new Error("Unauthorized Domain");
+        }
+
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.onkeydown = function(e) {
+            if (e.keyCode == 123) return false;
+            if (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0))) return false;
+            if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+        };
+
+        let allNumbers = [];
+        let contacts = [];
+        let lookupResultsMap = new Map();
+        let crossContactDuplicates = new Map();
+
+        function setupDragAndDrop(elementId, fileInputId, callback) {
+            const dropArea = document.getElementById(elementId);
+            const fileInput = document.getElementById(fileInputId);
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+            });
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false);
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false);
+            });
+            dropArea.addEventListener('drop', (e) => {
+                let files = e.dataTransfer.files;
+                if (files && files.length > 0) { fileInput.files = files; if (callback) callback(files); }
+            }, false);
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0 && callback) callback(e.target.files);
+            });
+        }
+
+        setupDragAndDrop('lookupUploadArea', 'lookupFileInput', (files) => handleLookupFile(files[0]));
+        setupDragAndDrop('uploadArea', 'fileInput', (files) => handleFiles(files));
+
+        function deduplicateContactsGlobally() {
+            const globalSeen = new Set();
+            crossContactDuplicates = new Map();
+            const numberTotalCount = new Map();
+
+            // 1. إحصاء التكرارات الشاملة بدقة لتغذية قسم (Duplicates Found)
+            contacts.forEach(contact => {
+                // إزالة التكرار الداخلي ضمن نفس الشخص أولاً لمنع التضخم الوهمي
+                contact.numbers = [...new Set(contact.numbers)];
+                
+                contact.numbers.forEach(n => {
+                    numberTotalCount.set(n, (numberTotalCount.get(n) || 0) + 1);
+                });
+            });
+
+            // تسجيل الأرقام المكررة في الخريطة
+            numberTotalCount.forEach((count, num) => {
+                if (count > 1) crossContactDuplicates.set(num, count);
+            });
+
+            // 2. التجريد القاسي (Strict Global Deduplication): الرقم يعيش مرة واحدة فقط عند أول ظهور له
+            contacts.forEach(contact => {
+                contact.numbers = contact.numbers.filter(n => {
+                    if (globalSeen.has(n)) return false; // مسح الرقم المكرر فوراً دون أي استثناءات
+                    globalSeen.add(n);
+                    return true;
+                });
+            });
+
+            // 3. تنظيف الذاكرة العميقة (Garbage Collection)
+            // every name stays (2026-11-13): only an empty EXTRACTED DATA group goes
+            contacts = contacts.filter(c =>
+                c.isLabel || c.name !== 'EXTRACTED DATA' ||
+                c.numbers.length > 0 || 
+                (c.emails && c.emails.length > 0) || 
+                (c.addresses && c.addresses.length > 0)
+            );
+
+            // 4. تحديث المصفوفة الكلية المرجعية
+            allNumbers = Array.from(globalSeen);
+        }
+
+        function extractPhoneNumbers(text) {
+            text = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '');
+            const phonePattern = /(?:\+?1[-.\s]?)?\(?[0-9OoIl]{3}\)?[-.\s]{0,2}[0-9OoIl]{3}[-.\s]{0,2}[0-9OoIl]{4}/gi;
+            let matches = text.match(phonePattern) || [];
+            const noSpaceText = text.replace(/\s+/g, '');
+            const scatteredGroups = noSpaceText.match(/[0-9OoIl]{10,}/gi) || [];
+            matches.push(...scatteredGroups);
+            const seen = new Set();
+            return matches
+                .map(num => num.replace(/[Oo]/g, '0').replace(/[Il]/g, '1').replace(/[^\d]/g, ''))
+                .map(num => num.length > 10 ? num.slice(-10) : num)
+                .filter(num => num.length === 10)
+                .filter(num => !seen.has(num) && seen.add(num));
+        }
+
+        const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+        function extractEmails(line) { return line.match(emailRegex) || []; }
+
+        function extractAddressFromLine(line) {
+            if (/\t/.test(line)) return null;
+            if (/experian|transunion|equifax|phone record|bank account|household|wireless|landline|cellular|residence|historic|current|previous|voice line/i.test(line)) return null;
+
+            if (/^RR\s+\w+\s+\d+$/i.test(line.trim())) return line.trim();
+
+            // Every word here has to end where the word in the text ends, or it
+            // matches inside a longer one and swallows the city — which then
+            // takes the state and zip with it. Two real cases: "FLUSHING" was
+            // read as the unit marker "FL" plus a floor number of "USHING", and
+            // "RIDGEWOOD" as the street type "RIDGE" plus a leftover "WOOD".
+            // Hence (?!\w) after the street types and (?![A-Za-z]) after the
+            // unit markers, which still allows "APT2" while refusing "FLUSHING".
+            //
+            // The unit group repeats: "338 15TH ST APT 2 APT 2" appears in the
+            // source data, and a single unit stopped the match dead there.
+            //
+            // The one-or-two character slot is for "1107 66TH ROAD C". It has to
+            // step over a unit marker or it takes the FL out of "FL 3".
+            const addressRegex = /\b\d+(?:-\d+)?\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Crescent|Path|Walk|Run|Pass|Bend|Cove|Point|Hill|Heights|Knoll|Glen|Manor|Turnpike|Expressway|Plaza|Concourse|Gardens|Landing|Crossing|Trace|Alley|Estates|Blvd|Pkwy|Hwy|Trl|Rdg|Cres|Tpke|Expy|Plz|Gdns|Lndg|Xing|Trce|Aly|Ests|Park|(?<!\w)Pk|(?<!\w)Cv|(?<!\w)Pt|(?<!\w)Hl|(?<!\w)Hts|(?<!\w)Gln|(?<!\w)Mnr|(?<!\w)Ter|(?<!\w)St|(?<!\w)Ave|(?<!\w)Dr|(?<!\w)Rd|(?<!\w)Ln|(?<!\w)Ct|(?<!\w)Pl|(?<!\w)Sq)(?!\w)\.?(?:\s+(?!(?:UNIT|APT|STE|RM|FL)(?![A-Za-z]))[A-Za-z0-9]{1,2}\b)?(?:\s+(?:(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z])|#)\s*[A-Za-z0-9]+)*/i;
+
+            const match = line.match(addressRegex);
+            if (!match) return null;
+            const addr = match[0].trim();
+            // number + street word is already a real address ("100 BROADWAY")
+            if (addr.split(/\s+/).length < 2) return null;
+
+            // City/state only in what FOLLOWS the address: matching the whole
+            // line let the city group run back into the street name.
+            const rest = line.slice(match.index + match[0].length);
+            // Four or five digits: the source data carries truncated zips
+            // ("NEW YORK, NY 1028"), and demanding five left the city unmatched,
+            // so the state and zip were dropped from the address entirely.
+            // The comma after the city is optional — the source has both
+            // "BRONX, NY 10469" and "BRONX NY 10469". The result is always
+            // rebuilt WITH the comma, so either spelling comes out the same.
+            // The lazy city group stops where two capitals followed by a zip
+            // begin, so "SANTA BARBARA CA 93103" still splits after BARBARA.
+            const CITY_STATE_ZIP = /^[,\s]*([A-Za-z][A-Za-z\s]*?)\s*,?\s*([A-Z]{2})\s*(\d{4,5}(?:-\d{4})?)\s*$/;
+            const cityStateMatch = rest.match(CITY_STATE_ZIP);
+            if (cityStateMatch) {
+                return addr + ', ' + cityStateMatch[1].trim() + ', ' + cityStateMatch[2] + ' ' + cityStateMatch[3];
+            }
+
+            // Greedy overshoots when the CITY ends in a street word: "66 MEADOW
+            // LN ROSLYN HEIGHTS, NY 11577" was read as a street ending in
+            // HEIGHTS, leaving ", NY 11577" with no city — so state and zip were
+            // dropped. Only when that happens (the remainder is a bare state and
+            // zip — or a bare zip, when the two-letter slot after the street
+            // word has swallowed the state as well), back the match up one word
+            // at a time until what follows it reads as a city again.
+            if (/^[,\s]*(?:[A-Z]{2}\s*)?\d{4,5}(?:-\d{4})?\s*$/.test(rest)) {
+                let end = match.index + match[0].length;
+                for (;;) {
+                    const cut = line.slice(match.index, end).replace(/\s+\S+\s*$/, '');
+                    if (!cut || cut === line.slice(match.index, end)) break;
+                    end = match.index + cut.length;
+                    const m2 = cut.match(addressRegex);
+                    if (!m2 || m2.index !== 0 || m2[0].length !== cut.length) continue;
+                    const again = line.slice(end).match(CITY_STATE_ZIP);
+                    if (again) return cut.trim() + ', ' + again[1].trim() + ', ' + again[2] + ' ' + again[3];
+                }
+            }
+            return addr;
+        }
+
+        function isValidContactName(name) {
+            const lowerName = name.toLowerCase().trim();
+            if (/\b\d+(st|nd|rd|th)\s*(degree)?\b/i.test(name)) return false; if (/^(deceased|phone\s*#?\(s\)?|email\s*address|sources?)$/i.test(lowerName)) return false;
+            const invalidWords = ['repeat', '1st degree', '2nd degree', '3rd degree', 'associates', 'no work', 'wrong', 'do not call', 'dnc', 'not interested', 'voicemail', 'disconnected', 'busy', 'no answer', 'left message', 'spoke', 'callback', 'call back', 'texted', 'dead', 'sold', 'spanish', 'language', 'invalid', 'status', 'update', 'said', 'told', 'interested', 'machine', 'mailbox', 'message', 'none', 'n/a', 'na', 'not in service', 'no longer', 'business', 'out of service', 'does not work', 'stop', 'quit', 'opt out', 'remove', 'hang up', 'hung up', 'bad number', 'wrong number', 'not working', 'no english', 'english', 'not', 'dont', 'doesnt', 'work', 'worked', 'working', 'number', 'phone', 'contact', 'call', 'caller', 'cancel', 'cancelled', 'delete', 'deleted', 'unknown', 'fake', 'bogus', 'scam', 'spam', 'spamming', 'scammer', 'fraud', 'fraudulent', 'hello', 'owner', 'manager', 'tenant', 'landlord', 'resident', 'husband', 'wife', 'son', 'daughter', 'father', 'mother', 'brother', 'sister', 'uncle', 'aunt', 'cousin', 'nephew', 'niece', 'grandfather', 'grandmother', 'grandson', 'granddaughter', 'family', 'friend', 'neighbor', 'associate', 'relative', 'relatives', 'neighbors', 'associates', 'info', 'information', 'details', 'detail', 'data', 'record', 'records', 'file', 'files', 'account', 'accounts', 'profile', 'profiles', 'report', 'reports', 'document', 'documents', 'vm', 'lm', 'cb', 'ni', 'wn', 'bad', 'good', 'yes', 'no', 'true', 'false', 'same', 'diff', 'different', 'new', 'old', 'current', 'previous', 'historic', 'voice', 'line', 'cell', 'mobile', 'landline', 'wireless', 'telephone', 'tel', 'fax', 'email', 'address', 'addr', 'location', 'place', 'property', 'properties', 'home', 'house', 'apartment', 'apt', 'suite', 'ste', 'unit', 'room', 'rm', 'building', 'bldg', 'floor', 'fl', 'level', 'lvl', 'street', 'st', 'avenue', 'ave', 'boulevard', 'blvd', 'drive', 'dr', 'road', 'rd', 'lane', 'ln', 'way', 'court', 'ct', 'terrace', 'ter', 'parkway', 'pkwy', 'highway', 'hwy', 'circle', 'cir', 'loop', 'trail', 'trl', 'row', 'square', 'sq', 'broadway', 'crossing', 'xing', 'alley', 'left vm', 'lm on', 'did not answer', 'hanged up', 'not int', 'no int', 'take me off', 'remove me', 'wrong num', 'wrong person', 'wrong contact', 'bad num', 'mailbox full', 'vm full', 'voicemail full', 'not setup', 'not set up', 'busy signal', 'fast busy', 'fax machine', 'modem', 'screeching', 'dead air', 'silence', 'dropped', 'dropped call', 'call dropped', 'call later', 'try again', 'try later', 'call tomorrow', 'appointment', 'appt', 'schedule', 'scheduled', 'meeting', 'follow up', 'lead', 'prospect', 'opportunity', 'deal', 'client', 'customer', 'patient', 'buyer', 'seller', 'renter', 'leaser', 'lessee', 'lessor', 'broker', 'agent', 'realtor', 'real estate', 'realty', 'property management', 'pm', 'llc', 'inc', 'corp', 'corporation', 'company', 'co', 'ltd', 'limited', 'group', 'grp', 'partners', 'enterprises', 'ent', 'holdings', 'investments', 'inv', 'trust', 'fund', 'estate of', 'heirs of', 'care of', 'attn', 'attention'];
+            for (let word of invalidWords) { if (new RegExp('\\b' + word + '\\b', 'i').test(lowerName)) return false; }
+            
+            // رفع حد الكلمات المسموح بها لاستيعاب ملحقات الـ (AKA) والأقواس
+            const wordsCount = lowerName.split(/\s+/).length;
+            if (wordsCount > 10) return false; 
+            if (wordsCount === 1 && lowerName.length < 3) return false;
+            return true;
+        }
+
+                // Is this line a person (or a section label)? Ported from the Evernote
+        // extension, where it was worked out against his real notes. The plain
+        // reject-list test threw away real people whose SURNAME happens to be a
+        // rejected word ("JENNIFER YOUNG SON", "CANCEL, BRIANA"), names carrying a
+        // note after a dash ("RICCIO, RAYMOND L - dead"), generational suffixes
+        // ("MCFARLANE, JAMES E 3rd", mistaken for a degree label) — and took a stray
+        // provider fragment ("Experian Gateway") for a person. Their numbers then fell
+        // under the wrong name or under "EXTRACTED DATA".
+        function looksLikeName(text) {
+            const t = String(text || '').replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '').trim();
+            // A name followed by an age — "MARIA SANTOS AGE 67", "MARIA SANTOS 67",
+            // "SANTOS, MARIA, Age 67", "MARIA SANTOS (AGE 67)". The web tool's old
+            // name test accepted a trailing age; the stricter one ported from the
+            // extension did not, and the person's numbers fell under "EXTRACTED DATA"
+            // (2026-11-13). Judge the name without the age; the whole line is still
+            // what gets written. Only when what is left has no digit at all, so an
+            // address or a date ("ME 11/13") never passes for a name.
+            //
+            // Only two shapes count as an age (2026-11-13): "AGE 67" spelled out, or a
+            // bare number after a name of two or more words all in capitals — any
+            // trailing number made "Oct 3" and "Ext 204" people. A line ending in ":"
+            // is a label ("EMAIL ADDRESS:", "MAIL ADDRESS:"), never a person.
+            if (/:\s*$/.test(t)) return false;
+            const PLACE_WORD_RE = /\b(?:p\.?\s*o\.?\s*box|box|apt|unit|suite|ste|floor|fl|room|rm|lot|bldg|building|route|rte|hwy)\b/i;
+            const aged = t.replace(/[,\s]*\(?\s*age\s*:?\s*\d{1,3}\s*\)?\s*$/i, '').trim();
+            if (aged !== t && /[A-Za-z]{2}/.test(aged) && !/\d/.test(aged) && !PLACE_WORD_RE.test(aged)) return looksLikeName(aged);
+            const bare = t.match(/^(.+?)\s+\d{1,3}$/);
+            if (bare && /^[A-Z][A-Z\s,.'-]*$/.test(bare[1].trim()) && bare[1].trim().split(/\s+/).length >= 2 &&
+                !PLACE_WORD_RE.test(bare[1])) return looksLikeName(bare[1].trim());
+            if (!t || t.includes('@')) return false;
+            if (extractPhoneNumbers(t).length > 0) return false;
+            if (/^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i.test(t)) return true;
+            if (/(phone\s*#|\bsources?\b|phone\s*type|email\s*address\s*:)/i.test(t)) return false;
+            // nothing but provider / type words: "Experian", "Experian Gateway"
+            const SOURCE_WORDS = /\b(experian|transunion|equifax|lexisnexis|gateway|credit bureau|bank account|phone record|motor vehicle|work affiliations|professional licenses|new movers|household|utility|voter|residence|residential|landline|land line|voice line|voip|wireless|historic|historical|current|previous)\b/gi;
+            if (t.replace(SOURCE_WORDS, ' ').replace(/[^A-Za-z]+/g, '').length === 0) return false;
+
+            const NAME_SHAPE = /^[A-Za-z][A-Za-z\s,.'()\-&]+$/;
+            const SUFFIX_RE = /[,\s]+(?:jr|sr|ii|iii|iv|2nd|3rd|4th|5th)\.?$/i;
+            const valid = (s) => isValidContactName(s);
+
+            // the name proper is the line minus any note after a dash
+            const head = t.split(/\s+[-\u2013\u2014]\s+/)[0].trim();
+            const forms = [head];
+
+            // "SURNAME, GIVEN": judge the given part alone when the surname is plain
+            // letters, so a surname that is also a rejected word does not sink a person
+            const comma = head.indexOf(',');
+            if (comma > 0) {
+                const surname = head.slice(0, comma).trim();
+                const given = head.slice(comma + 1).trim();
+                if (/^[A-Za-z][A-Za-z'\-]*(?:\s+[A-Za-z][A-Za-z'\-]*){0,2}$/.test(surname) && given.length > 1) forms.push(given);
+            }
+            forms.slice().forEach(f => {
+                const bare = f.replace(SUFFIX_RE, '').trim();
+                if (bare !== f && bare.length > 1) forms.push(bare);
+            });
+
+            // last resort: drop the individual words the reject list objects to and see
+            // whether a name remains — only on a line written like a name (no digits,
+            // every real word capitalised)
+            const CONNECTOR_RE = /^(?:aka|van|von|der|den|del|dos|bin|ibn|nee)$/i;
+            const looksTyped = (f) => !/\d/.test(f) && f.split(/\s+/).every(part => {
+                const w = part.replace(/[^A-Za-z'\-]/g, '');
+                return w.length <= 2 || CONNECTOR_RE.test(w) || /^[A-Z]/.test(w);
+            });
+            forms.filter(looksTyped).forEach(f => {
+                let keptRealWord = false;
+                const kept = f.split(/\s+/).filter(part => {
+                    const word = part.replace(/[^A-Za-z'\-]/g, '');
+                    if (!word) return false;
+                    if (word.length <= 2) return true;
+                    if (!valid(word)) return false;
+                    keptRealWord = true;
+                    return true;
+                });
+                if (keptRealWord && kept.length) forms.push(kept.join(' '));
+            });
+
+            return [t].concat(forms).some(c => NAME_SHAPE.test(c) && valid(c));
+        }
+
+
+        const LABEL_RE = /^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i;
+        // guard.js calls the extension's names for these
+        const efExtractPhoneNumbers = extractPhoneNumbers, efExtractEmails = extractEmails,
+            efExtractAddressFromLine = extractAddressFromLine;
+
+        // A line that starts a contact: a section label, or a person's name.
+        function isContactNameLine(line) {
+            const t = String(line || '').replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '').trim();
+            if (!t) return false;
+            if (LABEL_RE.test(t)) return true;
+            return !t.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(t) && extractPhoneNumbers(t).length === 0 && looksLikeName(t);
+        }
+
+        function groupNumbersByNames(text) {
+            text = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '');
+
+            const rawLines = text.split('\n');
+            const mergedLines = [];
+            for (let i = 0; i < rawLines.length; i++) {
+                const line = rawLines[i].trim();
+                const prev = mergedLines.length ? mergedLines[mergedLines.length - 1].trim() : '';
+                // a unit cut off its street ("APT 2T") joins the street above it
+                if (/^(?:apt|unit|suite|ste|room|rm|floor|fl|#)\s*[A-Za-z0-9-]+$/i.test(line) && extractAddressFromLine(prev)) {
+                    mergedLines[mergedLines.length - 1] = prev + ' ' + line;
+                    continue;
+                }
+                // Four or five digits here too, or a truncated zip stops the
+                // city line joining the street above it and it stands alone.
+                // comma optional here too, or "BRONX NY 10469" never joins its street \u2014
+                // but never onto a line that already ends in its own city, state and
+                // zip: glued together, both cities were lost (2026-11-13)
+                if (/^[A-Z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/.test(line) && mergedLines.length > 0 &&
+                    !/,\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?\s*$/.test(prev)) {
+                    mergedLines[mergedLines.length - 1] = mergedLines[mergedLines.length - 1].trim() + ' ' + line;
+                } else {
+                    mergedLines.push(line);
+                }
+            }
+
+            const lines = mergedLines;
+            const newContacts = [];
+            let currentContact = null;
+            // Which section each contact sits in: one occurrence of a label is one
+            // section (0 = before any label). The same person folds only within one.
+            let section = 0;
+            let orphanNumbers = [];
+            let orphanEmails = [];
+            let orphanAddresses = [];
+            let orphanCellular = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // التعديل المعماري: عدم بتر أي أرقام من السطر عشوائياً
+                const cleanedLine = line.trim();
+                const emails = extractEmails(line);
+                // a city line left on its own (it would not join a street that
+                // already has its city) is kept as it is rather than lost
+                const addr = extractAddressFromLine(line) ||
+                    (/^[A-Z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/.test(line) ? line : null);
+                const numbers = extractPhoneNumbers(line);
+                // سطر نوعه Cellular (كلمة كاملة — CELL لوحدها لا تُحتسب) → أرقامه موبايل
+                const isCellularLine = /\bcellular\b/i.test(line);
+
+                let potentialName = null;
+                let isDegreeLabel = false;
+
+                if (LABEL_RE.test(cleanedLine)) {
+                    potentialName = cleanedLine;
+                    isDegreeLabel = true;
+                    section++;
+                } else if (isContactNameLine(cleanedLine)) {
+                    // judged as the Evernote extension judges a name line — see looksLikeName
+                    potentialName = cleanedLine;
+                }
+
+                if (potentialName) {
+                    if (currentContact) newContacts.push(currentContact);
+                    
+                    // التعديل المعماري: عزل البيانات اليتيمة بدلاً من توريثها
+                    if (orphanNumbers.length || orphanEmails.length || orphanAddresses.length) {
+                         newContacts.push({ name: "EXTRACTED DATA", numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses], cellular: [...orphanCellular], section });
+                    }
+
+                    currentContact = { name: potentialName, numbers: [], emails: [], addresses: [], cellular: [], isLabel: isDegreeLabel, section };
+                    orphanNumbers = []; orphanEmails = []; orphanAddresses = []; orphanCellular = [];
+                } else {
+                    if (currentContact) {
+                        currentContact.emails.push(...emails);
+                        if (addr && !currentContact.addresses.includes(addr)) currentContact.addresses.push(addr);
+                        numbers.forEach(n => { if (!currentContact.numbers.includes(n)) currentContact.numbers.push(n); });
+                        if (isCellularLine) numbers.forEach(n => { if (!currentContact.cellular.includes(n)) currentContact.cellular.push(n); });
+                    } else {
+                        orphanEmails.push(...emails);
+                        if (addr && !orphanAddresses.includes(addr)) orphanAddresses.push(addr);
+                        numbers.forEach(n => { if (!orphanNumbers.includes(n)) orphanNumbers.push(n); });
+                        if (isCellularLine) numbers.forEach(n => { if (!orphanCellular.includes(n)) orphanCellular.push(n); });
+                    }
+                }
+            }
+
+            if (currentContact) newContacts.push(currentContact);
+            if (orphanNumbers.length || orphanEmails.length || orphanAddresses.length) {
+                newContacts.push({ name: "EXTRACTED DATA", numbers: orphanNumbers, emails: orphanEmails, addresses: orphanAddresses, cellular: orphanCellular, section });
+            }
+            // Since 2026-11-13 every name stays — a deceased owner, a person with
+            // no numbers, a person whose numbers were all duplicates. Only an empty
+            // "EXTRACTED DATA" group goes.
+            return newContacts.filter(c => c.name !== 'EXTRACTED DATA' || c.numbers.length > 0 || c.emails.length > 0 || c.addresses.length > 0);
+        }
+
+        // Session state: every paste of this session, and the section numbering
+        // carried across pastes (a paste with no label continues the last section).
+        let sessionInputs = [], sessionSections = 0, currentSection = 0;
+
+        // Fold one paste's contacts into the session. The same person (same name)
+        // in the same section becomes one entry; labels are never merged.
+        function mergeIntoSession(newOnes) {
+            const base = sessionSections;
+            let maxLocal = 0;
+            newOnes.forEach(nc => {
+                const local = nc.section || 0;
+                maxLocal = Math.max(maxLocal, local);
+                nc.section = local === 0 ? currentSection : base + local;
+                const key = c => c.section + '|' + c.name.replace(/\s+/g, ' ').trim().toLowerCase();
+                const ex = nc.isLabel ? null : contacts.find(c => !c.isLabel && key(c) === key(nc));
+                if (ex) {
+                    nc.numbers.forEach(n => { if (!ex.numbers.includes(n)) ex.numbers.push(n); });
+                    ex.emails = [...new Set([...(ex.emails || []), ...(nc.emails || [])])];
+                    ex.addresses = [...new Set([...(ex.addresses || []), ...(nc.addresses || [])])];
+                    ex.cellular = [...new Set([...(ex.cellular || []), ...(nc.cellular || [])])];
+                } else contacts.push(nc);
+            });
+            sessionSections = base + maxLocal;
+            if (maxLocal > 0) currentSection = sessionSections;
+            deduplicateContactsGlobally();
+        }
+
+        // The result as plain lines, in the order it is shown.
+        function contactsPlain() {
+            return contacts.map(c => [c.name].concat(c.addresses || [], c.emails || [],
+                c.numbers.map(n => '(' + n.slice(0, 3) + ') ' + n.slice(3, 6) + '-' + n.slice(6))).join('\n')).join('\n\n');
+        }
+
+        // The pre-write guard (guard.js) on the whole session: every name and
+        // label in order, every address and email, every number exactly once.
+        function guardSession() {
+            return efGuardCheck(sessionInputs.join('\n').split('\n'), contactsPlain(), {
+                isName: isContactNameLine,
+                isSection: t => LABEL_RE.test(t.trim()),
+                isRaw: t => /\t/.test(t) || efIsRowVocabOnly(t),
+                nameKey: t => t.replace(/\s+/g, ' ').trim().toLowerCase(),
+                outside: new Set(),
+                verbatim: false
+            });
+        }
+
+        function groupNumbersByNamesFromImage(text) {
+            text = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '');
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            const labelPattern = /^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i;
+            
+            // التعديل المعماري: مطابقة تعبير الـ OCR مع التعديل الجديد
+            const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-()&]+?(?:\s*(?:AGE|-)?\s*\d{1,3})?)$/i;
+            const prefixedNamePattern = /(?:Relatives|Neighbors|Associates)\s+For:\s+([A-Z][A-Z\s]+[A-Z])/i;
+            const allCapsNamePattern = /^([A-Z]{2,}(?:\s+[A-Z]{1,2}(?:\s+[A-Z]{2,})+))$/;
+            
+            let firstName = null;
+            let isLabel = false;
+            
+            for (const line of lines) { const m = line.match(labelPattern); if (m) { firstName = m[0].trim(); isLabel = true; break; } }
+            if (!firstName) { for (const line of lines) { const m = line.match(prefixedNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } }
+            
+            if (!firstName) { for (const line of lines) { if (standaloneNamePattern.test(line) && line.length > 3 && extractPhoneNumbers(line).length === 0) { const m = line.match(standaloneNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } } }
+            
+            if (!firstName) { for (const line of lines) { if (line.match(/\d/) || /SSN|DOB|LexID|Gender|View|Setup|Report|Locator|Confidence|Carrier|Feedback|Landline|Wireless|Address|Phone|Subject|Information|Next|Steps|Relatives|Neighbors|Associates/i.test(line)) continue; const m = line.match(allCapsNamePattern); if (m && isValidContactName(m[1])) { firstName = m[1].trim(); break; } } }
+            if (!firstName) { const m = text.match(/\b([A-Z]{2,}(?:\s+[A-Z]{1,2}\b)?(?:\s+[A-Z]{2,})+)/); if (m && isValidContactName(m[1])) firstName = m[1].trim(); }
+            
+            const allEmails = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) || [];
+            const allAddresses = text.split('\n').map(l => extractAddressFromLine(l.trim())).filter(Boolean);
+            const allPhones = extractPhoneNumbers(text);
+            if (allPhones.length === 0 && allEmails.length === 0) return [];
+            return [{ name: firstName || 'EXTRACTED DATA', numbers: [...new Set(allPhones)], emails: [...new Set(allEmails)], addresses: [...new Set(allAddresses)], cellular: [], isLabel: isLabel }];
+        }
+
+        function handleLookupFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true, raw: true });
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                    if (json.length < 2) return showNotification('Lookup file is empty.', 'error');
+                    const headers = json[0].map(h => String(h).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+                    let pIdx = headers.findIndex(h => ['phonenumber', 'phone', 'number'].includes(h));
+                    let eIdx = headers.findIndex(h => ['exist', 'whatsapp', 'status', 'result'].includes(h));
+                    if (pIdx === -1 || eIdx === -1) return showNotification('Columns not found.', 'error');
+                    json.slice(1).forEach(row => {
+                        let n = String(row[pIdx]).replace(/[^\d]/g, '');
+                        if (n.length >= 10) {
+                            if (n.length > 10) n = n.slice(-10);
+                            const s = String(row[eIdx]).toLowerCase().trim();
+                            lookupResultsMap.set(n, ['1', 'yes', 'true', 'valid'].includes(s) ? 'yes' : 'no');
+                        }
+                    });
+                    updateStats(); updateCleanedNumbers(); showNotification('Lookup Success!', 'success');
+                } catch (error) { showNotification('Failed to process Excel.', 'error'); }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function formatPhoneNumber(number) { return number.length === 10 ? `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}` : number; }
+
+        function updateStats() {
+            let totalInstances = allNumbers.length;
+            crossContactDuplicates.forEach((count, num) => { totalInstances += (count - 1); });
+            document.getElementById('totalCount').textContent = totalInstances;
+            document.getElementById('uniqueCount').textContent = allNumbers.length;
+            document.getElementById('lookupCount').textContent = lookupResultsMap.size;
+        }
+
+        // كل الأرقام اللي ظهرت في أي سطر نوعه Cellular (union على مستوى الجلسة —
+        // العلامة بتتبع الرقم حتى لو الـ dedup نقله لجهة تانية)
+        function getCellularSet() {
+            return new Set(contacts.flatMap(c => c.cellular || []));
+        }
+
+        function updateCleanedNumbers() {
+            const container = document.getElementById('cleanedNumbers');
+            if (contacts.length === 0) { container.innerHTML = ''; return; }
+            const cellularSet = getCellularSet();
+            // One entry per contact, in order. Contacts are already folded per
+            // section (mergeIntoSession); grouping again by name here put a
+            // person listed under two labels into one, and every repeated
+            // "1ST DEGREE" into the first (2026-11-13).
+            let html = '';
+            contacts.forEach(({ numbers, emails = [], addresses = [], isLabel, name }) => {
+                html += '<div class="contact-group" style="margin-bottom: 20px;">';
+                const nameColor = 'rgb(51, 204, 255)'; const nameBorder = isLabel ? 'border-top: 1px solid #444; margin-top: 10px; padding-top: 10px;' : ''; html += `<div style="${nameBorder}"><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${name}</span></div>`;
+                addresses.forEach(addr => { html += `<div><span style="color: rgb(229, 158, 37);">${addr}</span></div>`; });
+                emails.forEach(email => { html += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>`; });
+                numbers.forEach((number) => {
+                    const res = lookupResultsMap.get(number);
+                    let color = 'rgb(255, 255, 255)';
+                    if (res === 'yes') color = 'rgb(24, 168, 65)'; else if (res === 'no') color = 'rgb(252, 18, 51)';
+                    const prot = `(${number.slice(0, 3)})&#8203; ${number.slice(3, 6)}-${number.slice(6)}`;
+                    const cellTag = cellularSet.has(number) ? ` <span style="color: rgb(161, 161, 170); font-size: 0.85rem;">Cellular</span>` : '';
+                    html += `<div><span style="color: ${color};">${prot}</span>${cellTag}</div>`;
+                });
+                html += '</div>';
+            });
+            container.innerHTML = html;
+        }
+
+        function updateAmericanNumbers() {
+            const container = document.getElementById('americanNumbers');
+            const unique = Array.from(new Set(contacts.flatMap(c => c.numbers)));
+            if (unique.length === 0) { container.innerHTML = ''; return; }
+            container.innerHTML = unique.map(n => `<div><span>+1 ${formatPhoneNumber(n)}</span></div>`).join('');
+        }
+
+        function updateDuplicateNumbers() {
+            const container = document.getElementById('duplicateNumbers');
+            if (crossContactDuplicates.size === 0) { container.innerHTML = ''; return; }
+            let html = '';
+            crossContactDuplicates.forEach((count, num) => {
+                html += `<div><span style="display: inline-block; width: 150px;">${formatPhoneNumber(num)}</span><span style="color: var(--accent-red); font-size: 0.85rem;">${count} times</span></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function processText() {
+            let text = document.getElementById('textInput').value.trim();
+            text = text.replace(/[\u200B-\u200F\u2060-\u2064\uFEFF\u00AD]/g, '');
+            if (!text) return showNotification('Enter text to process', 'error');
+            // the same text twice (Process clicked again) would list every
+            // label and person a second time — sections no longer merge by name
+            if (sessionInputs.includes(text)) return showNotification('This text was already processed', 'error');
+            sessionInputs.push(text);
+            mergeIntoSession(groupNumbersByNames(text));
+            // The guard (guard.js): if a name, label, address or email would be
+            // missing, or a number not exactly once, nothing is shown.
+            const g = guardSession();
+            if (!g.ok) {
+                const box = document.getElementById('cleanedNumbers');
+                box.innerHTML = '';
+                const warn = document.createElement('div');
+                warn.style.cssText = 'color: rgb(252, 18, 51); font-weight: bold; white-space: pre-wrap;';
+                warn.textContent = 'Guard stopped the result — something would be lost. Nothing is shown.\n' +
+                    g.problems.slice(0, 5).map(p => p.kind + ': ' + p.text).join('\n') +
+                    (g.problems.length > 5 ? '\n… +' + (g.problems.length - 5) + ' more' : '');
+                box.appendChild(warn);
+                return showNotification('Guard stopped the result — see the box', 'error');
+            }
+            updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
+            showNotification('Data processed successfully!', 'success');
+        }
+
+        function clearSession() {
+            allNumbers = []; contacts = []; lookupResultsMap.clear(); crossContactDuplicates.clear();
+            sessionInputs = []; sessionSections = 0; currentSection = 0;
+            document.getElementById('textInput').value = '';
+            updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
+            showNotification('Session cleared!', 'success');
+        }
+
+        function copyForWaChecker() {
+            const unique = Array.from(new Set(contacts.flatMap(c => c.numbers)));
+            if (unique.length === 0) return showNotification('No numbers to copy', 'error');
+            const text = unique.map(n => `+1 ${formatPhoneNumber(n)}`).join('\n');
+            const ta = document.createElement("textarea");
+            ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+            document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            showNotification('Numbers copied!', 'success');
+        }
+
+        function copyToClipboard(elementId) {
+            let cleanHtml = '<html><body>';
+            let plainText = '';
+            if (elementId === 'cleanedNumbers') {
+                const cellularSet = getCellularSet();
+                const map = new Map();
+                contacts.forEach(c => {
+                    if (!map.has(c.name)) map.set(c.name, { n: [], e: [], a: [], isLabel: c.isLabel });
+                    const entry = map.get(c.name);
+                    c.numbers.forEach(num => { if (!entry.n.includes(num)) entry.n.push(num); });
+                    (c.emails || []).forEach(em => { if (!entry.e.includes(em)) entry.e.push(em); });
+                    (c.addresses || []).forEach(ad => { if (!entry.a.includes(ad)) entry.a.push(ad); });
+                });
+                map.forEach(({ n, e, a, isLabel }, name) => {
+                    const nameColor = 'rgb(51, 204, 255)'; 
+                    cleanHtml += `<div><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${name}</span></div>\n`;
+                    plainText += name + '\n';
+                    a.forEach(addr => { cleanHtml += `<div><span style="color: rgb(229, 158, 37);">${addr}</span></div>\n`; plainText += addr + '\n'; });
+                    e.forEach(email => { cleanHtml += `<div><span style="color: rgb(51, 204, 255);">${email}</span></div>\n`; plainText += email + '\n'; });
+                    n.forEach(num => {
+                        const res = lookupResultsMap.get(num);
+                        const color = res === 'yes' ? 'rgb(24, 168, 65)' : (res === 'no' ? 'rgb(252, 18, 51)' : 'rgb(255, 255, 255)');
+                        const prot = `(${num.slice(0, 3)})&#8203; ${num.slice(3, 6)}-${num.slice(6)}`;
+                        const isCell = cellularSet.has(num);
+                        cleanHtml += `<div><span style="color: ${color};">${prot}</span>${isCell ? ' <span style="color: rgb(161, 161, 170);">Cellular</span>' : ''}</div>\n`;
+                        plainText += formatPhoneNumber(num) + (isCell ? ' Cellular' : '') + '\n';
+                    });
+                    cleanHtml += '<div><br></div>\n'; plainText += '\n';
+                });
+            } else {
+                plainText = document.getElementById(elementId).innerText;
+                plainText.split('\n').forEach(line => cleanHtml += `<div><span>${line}</span></div>\n`);
+            }
+            cleanHtml += '</body></html>';
+            const dummy = document.createElement('div');
+            dummy.textContent = 'dummy'; dummy.style.position = 'absolute'; dummy.style.left = '-9999px';
+            document.body.appendChild(dummy);
+            const sel = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(dummy);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            const listener = (event) => {
+                event.preventDefault();
+                event.clipboardData.setData('text/html', cleanHtml);
+                event.clipboardData.setData('text/plain', plainText.replace(/\n{3,}/g, '\n\n').trim());
+            };
+            document.addEventListener('copy', listener);
+            document.execCommand('copy');
+            document.removeEventListener('copy', listener);
+            sel.removeAllRanges();
+            document.body.removeChild(dummy);
+            showNotification('Copied perfectly!', 'success');
+        }
+
+        function showNotification(m, t) {
+            const n = document.createElement('div'); n.className = `notification ${t}`; n.textContent = m;
+            document.body.appendChild(n); setTimeout(() => n.classList.add('show'), 100);
+            setTimeout(() => { n.classList.remove('show'); setTimeout(() => n.remove(), 300); }, 3000);
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                const items = await navigator.clipboard.read();
+                const blobs = [];
+                for (const item of items) { for (const t of item.types) { if (t.startsWith('image/')) blobs.push(new File([await item.getType(t)], 'p.png', { type: t })); } }
+                if (blobs.length > 0) handleFiles(blobs);
+                else { const t = await navigator.clipboard.readText(); if (t) { document.getElementById('textInput').value += (document.getElementById('textInput').value ? '\n\n' : '') + t; showNotification('Text pasted!', 'success'); } }
+            } catch (e) { showNotification('Use Ctrl+V', 'error'); }
+        }
+
+        document.addEventListener("paste", async (e) => {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+            const items = Array.from(e.clipboardData.items).filter(i => i.type.startsWith("image/"));
+            if (items.length > 0) { e.preventDefault(); handleFiles(items.map(i => i.getAsFile())); }
+        });
+
+        function saveGeminiKey(v) { v = v.trim(); if (v) { localStorage.setItem('geminiApiKey', v); document.getElementById('geminiStatus').textContent = '✅ Key saved'; document.getElementById('geminiStatus').style.color = 'var(--success-green)'; } else { localStorage.removeItem('geminiApiKey'); document.getElementById('geminiStatus').textContent = '⬜ Not set'; document.getElementById('geminiStatus').style.color = ''; } }
+        function loadGeminiKey() { const k = localStorage.getItem('geminiApiKey') || ''; if (k) { document.getElementById('geminiApiKey').value = k; document.getElementById('geminiStatus').textContent = '✅ Key saved'; document.getElementById('geminiStatus').style.color = 'var(--success-green)'; } return k; }
+        function saveModelSelection(v) { localStorage.setItem('aiModelSelection', v); }
+        function loadModelSelection() { const m = localStorage.getItem('aiModelSelection') || 'gemini-2.0-flash'; document.getElementById('aiModelSelect').value = m; return m; }
+
+        async function testApiKey() {
+            const k = document.getElementById('geminiApiKey').value.trim();
+            if (!k) return showNotification('Enter API Key', 'error');
+            showNotification('Testing Key...', 'success');
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${k}`);
+                if (!res.ok) throw new Error('Invalid Key');
+                const data = await res.json();
+                const ms = data.models.filter(m => m.supportedGenerationMethods.includes('generateContent')).map(m => m.name.replace('models/', ''));
+                const sel = document.getElementById('aiModelSelect'); sel.innerHTML = '';
+                ms.forEach(id => { const o = document.createElement('option'); o.value = id; o.textContent = `🤖 ${id}`; o.style.background = '#1e1e1e'; sel.appendChild(o); });
+                const best = ms.find(m => m.includes('2.5-flash')) || ms.find(m => m.includes('2.0-flash')) || ms[0];
+                if (best) { sel.value = best; saveModelSelection(best); }
+                document.getElementById('debugOutput').value = "🎉 Success!\n\nModels:\n" + ms.join('\n');
+                document.getElementById('debugPanel').style.display = 'block';
+                showNotification('Key tested and models updated!', 'success');
+            } catch (e) { showNotification('Key Error: ' + e.message, 'error'); }
+        }
+
+        async function ocrWithAI(f) {
+            const k = document.getElementById('geminiApiKey').value.trim();
+            const m = document.getElementById('aiModelSelect').value;
+            if (!k) throw new Error("Key Required");
+            const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result.split(',')[1]); rd.readAsDataURL(f); });
+            const p = `You are a strict, high-precision OCR scanner. Scan the image strictly line by line, from top to bottom.
+CRITICAL INSTRUCTIONS:
+1. Extract EVERY SINGLE 10-digit phone number. DO NOT SKIP ANY ROW.
+2. The image is low resolution. Be extremely careful with circular digits: '6', '8', '9', and '0' look very similar. Look at the closures of the loops.
+3. Ignore all dates, timezones, and text (e.g., EDT, CDT, Nov 06, Jul 12).
+4. Output EXACTLY a vertical list of phone numbers. Nothing else.`;
+            const body = { contents: [{ parts: [{ inline_data: { mime_type: f.type, data: b64 } }, { text: p }] }] };
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${k}`, { method: 'POST', body: JSON.stringify(body) });
+            if (!res.ok) throw new Error('API Error');
+            const data = await res.json();
+            let txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const bt = String.fromCharCode(96);
+            return txt.replace(new RegExp(`${bt}{3}[a-zA-Z]*\\n?`, 'g'), '').replace(new RegExp(`${bt}{3}`, 'g'), '').trim();
+        }
+
+        async function handleFiles(fs) {
+            if (fs.length === 0) return;
+            const pc = document.getElementById('progressContainer'); const pf = document.getElementById('progressFill'); const pt = document.getElementById('progressText');
+            pc.style.display = 'block'; pf.style.width = '0%'; pt.textContent = 'Processing...';
+            try {
+                let allT = ''; const key = loadGeminiKey();
+                for (let i = 0; i < fs.length; i++) {
+                    pt.textContent = `🤖 Processing: ${fs[i].name || i+1}...`;
+                    try { const t = await ocrWithAI(fs[i]); allT += t + '\n\n'; }
+                    catch (e) { const p = await preprocessImage(fs[i]); const r = await Tesseract.recognize(p, 'eng'); allT += r.data.text + '\n\n'; }
+                    pf.style.width = ((i+1)/fs.length)*100 + '%';
+                    if (i < fs.length - 1 && key) await new Promise(r => setTimeout(r, 4000));
+                }
+                document.getElementById('debugOutput').value = allT; document.getElementById('debugPanel').style.display = 'block';
+                processExtractedText(allT); setTimeout(() => pc.style.display = 'none', 2000);
+                showNotification('Processed successfully!', 'success');
+            } catch (e) { pc.style.display = 'none'; showNotification('Failed.', 'error'); }
+        }
+
+        async function preprocessImage(f) {
+            return new Promise(r => {
+                const i = new Image(); const u = URL.createObjectURL(f);
+                i.onload = () => {
+                    const s = 3;
+                    const c = document.createElement('canvas'); c.width = i.naturalWidth * s; c.height = i.naturalHeight * s;
+                    const ctx = c.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(i, 0, 0, c.width, c.height);
+                    const id = ctx.getImageData(0, 0, c.width, c.height); const d = id.data;
+                    for (let j = 0; j < d.length; j += 4) {
+                        const g = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2];
+                        const val = g < 160 ? 0 : 255;
+                        d[j] = d[j+1] = d[j+2] = val;
+                    }
+                    ctx.putImageData(id, 0, 0);
+                    URL.revokeObjectURL(u); c.toBlob(b => r(b || f), 'image/png');
+                }; i.src = u;
+            });
+        }
+
+        function processExtractedText(t) {
+            document.getElementById('textInput').value += (document.getElementById('textInput').value ? '\n\n' : '') + t;
+            const ics = groupNumbersByNamesFromImage(t);
+            if (ics.length) {
+                ics.forEach(nc => {
+                    const ex = contacts.find(c => c.name === nc.name);
+                    if (ex) { nc.numbers.forEach(n => { if (!ex.numbers.includes(n)) ex.numbers.push(n); }); ex.emails = [...new Set([...(ex.emails || []), ...(nc.emails || [])])]; ex.addresses = [...new Set([...(ex.addresses || []), ...(nc.addresses || [])])]; }
+                    else contacts.push(nc);
+                });
+                deduplicateContactsGlobally(); updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
+            } else processText();
+        }
+
+        loadGeminiKey(); setTimeout(loadModelSelection, 100);
+    </script>
+</body>
+</html>
