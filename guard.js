@@ -41,6 +41,10 @@ function efIsRowVocabOnly(text) {
     let t = efGuardClean(text);
     const hasTabs = /\t/.test(t);
     t = t.replace(/\/\/.*$/, ' ').replace(EF_TEN_DIGIT_RE, ' ').replace(EF_SEVEN_DIGIT_RE, ' ');
+    // anything but Latin words and column punctuation — a date "10/12", "❌",
+    // a note in Arabic — is his writing, so the row is not a source row
+    // (ChatGPT review #1, 2026-11-15)
+    if (/[^A-Za-z\s,&#()\-:.]/.test(t)) return false;
     const words = t.toLowerCase().match(/[a-z]+/g) || [];
     if (!words.length) return hasTabs && efExtractPhoneNumbers(efGuardClean(text)).length > 0;
     return words.every(w => EF_ROW_VOCAB.has(w));
@@ -123,6 +127,7 @@ function efGuardCheck(before, after, opts) {
     // 4. every other line he has, as often as the groups it sits in
     if (opts.verbatim) {
         const exempt = (l) => l.blank || l.head || opts.isRaw(l.text) || isPlace(l) ||
+            /^\s*\d{3}[-.\s]\d{4}\s*$/.test(l.text) ||       // a 7-digit number may go
             !efGuardRest(l.text.replace(/\S+@\S+/g, ' '));
         const groupsOf = new Map();
         b.forEach(l => {

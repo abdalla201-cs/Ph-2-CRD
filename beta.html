@@ -160,6 +160,7 @@
                     </div>
                 </div>
                 <button class="btn-danger" onclick="clearSession()">🗑️ Clear Session</button>
+                <button class="btn-secondary" onclick="downloadLog()" title="Every run on this computer: text before, result after, what the guard said">📥 Download log</button>
             </div>
         </div>
 
@@ -474,7 +475,8 @@
                 const line = rawLines[i].trim();
                 const prev = mergedLines.length ? mergedLines[mergedLines.length - 1].trim() : '';
                 // a unit cut off its street ("APT 2T") joins the street above it
-                if (/^(?:apt|unit|suite|ste|room|rm|floor|fl|#)\s*[A-Za-z0-9-]+$/i.test(line) && extractAddressFromLine(prev)) {
+                if (/^(?:apt|unit|suite|ste|room|rm|floor|fl|#)\s*[A-Za-z0-9-]+$/i.test(line) && extractAddressFromLine(prev) &&
+                    !/,\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?\s*$/.test(prev)) {   // never after the city (review #10)
                     mergedLines[mergedLines.length - 1] = prev + ' ' + line;
                     continue;
                 }
@@ -512,7 +514,9 @@
                 // a city line left on its own (it would not join a street that
                 // already has its city) is kept as it is rather than lost
                 const addr = extractAddressFromLine(line) ||
-                    (/^[A-Z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/.test(line) ? line : null);
+                    (/^[A-Z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/.test(line) ? line : null) ||
+                    // ...and so is a unit line that could not join its street
+                    (/^(?:apt|unit|suite|ste|room|rm|floor|fl|#)\s*[A-Za-z0-9-]+$/i.test(line) ? line : null);
                 const numbers = extractPhoneNumbers(line);
                 // سطر نوعه Cellular (كلمة كاملة — CELL لوحدها لا تُحتسب) → أرقامه موبايل
                 const isCellularLine = /\bcellular\b/i.test(line);
@@ -593,7 +597,9 @@
 
         // The result as plain lines, in the order it is shown.
         function contactsPlain() {
-            return contacts.map(c => [c.name].concat(c.addresses || [], c.emails || [],
+            // contacts read from a picture came from no pasted text: the guard
+            // does not judge them (ChatGPT review #8)
+            return contacts.filter(c => !c.fromImage).map(c => [c.name].concat(c.addresses || [], c.emails || [],
                 c.numbers.map(n => '(' + n.slice(0, 3) + ') ' + n.slice(3, 6) + '-' + n.slice(6))).join('\n')).join('\n\n');
         }
 
@@ -605,7 +611,8 @@
                 isSection: t => LABEL_RE.test(t.trim()),
                 isRaw: t => /\t/.test(t) || efIsRowVocabOnly(t),
                 nameKey: t => t.replace(/\s+/g, ' ').trim().toLowerCase(),
-                outside: new Set(),
+                // a number a picture already holds may be missing from the text's result
+                outside: new Set(contacts.filter(c => c.fromImage).flatMap(c => c.numbers)),
                 verbatim: false
             });
         }
@@ -732,24 +739,58 @@
             // the same text twice (Process clicked again) would list every
             // label and person a second time — sections no longer merge by name
             if (sessionInputs.includes(text)) return showNotification('This text was already processed', 'error');
+            // kept aside, so a result the guard refuses leaves the last good one
+            // in place — on screen, for Copy and for Copy for WA (review #7)
+            const snap = { contacts: JSON.parse(JSON.stringify(contacts)), inputs: sessionInputs.slice(),
+                sections: sessionSections, current: currentSection, all: allNumbers.slice() };
             sessionInputs.push(text);
             mergeIntoSession(groupNumbersByNames(text));
             // The guard (guard.js): if a name, label, address or email would be
-            // missing, or a number not exactly once, nothing is shown.
+            // missing, or a number not exactly once, nothing of this paste is kept.
             const g = guardSession();
+            logRun('web', text, contactsPlain(), g);
             if (!g.ok) {
+                contacts = snap.contacts; sessionInputs = snap.inputs; sessionSections = snap.sections;
+                currentSection = snap.current; allNumbers = snap.all;
+                deduplicateContactsGlobally();
+                updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
                 const box = document.getElementById('cleanedNumbers');
-                box.innerHTML = '';
                 const warn = document.createElement('div');
                 warn.style.cssText = 'color: rgb(252, 18, 51); font-weight: bold; white-space: pre-wrap;';
-                warn.textContent = 'Guard stopped the result — something would be lost. Nothing is shown.\n' +
+                warn.textContent = 'Guard stopped this text — something would be lost, so it was not added. ' +
+                    'The result below is the last good one.\n' +
                     g.problems.slice(0, 5).map(p => p.kind + ': ' + p.text).join('\n') +
                     (g.problems.length > 5 ? '\n… +' + (g.problems.length - 5) + ' more' : '');
-                box.appendChild(warn);
+                box.insertBefore(warn, box.firstChild);
                 return showNotification('Guard stopped the result — see the box', 'error');
             }
             updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
             showNotification('Data processed successfully!', 'success');
+        }
+
+        // The run log (2026-11-15): every Process on this computer is kept here,
+        // in this browser only — text before, result after, the guard's verdict —
+        // so mistakes can be studied and turned into tests. Nothing is sent
+        // anywhere; "Download log" saves it as a file. The newest 300 runs are kept.
+        const LOG_KEY = 'ph2crdRunLog';
+        function logRun(tool, before, after, guard) {
+            try {
+                const log = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+                log.push({ at: new Date().toISOString(), tool, page: location.pathname.split('/').pop(),
+                    before, after, ok: guard.ok, problems: guard.problems.slice(0, 20) });
+                while (log.length > 300) log.shift();
+                localStorage.setItem(LOG_KEY, JSON.stringify(log));
+            } catch (e) { /* storage full or blocked: the run itself still goes on */ }
+        }
+        function downloadLog() {
+            let log = [];
+            try { log = JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch (e) { /* empty */ }
+            if (!log.length) return showNotification('The log is empty', 'error');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(log, null, 1)], { type: 'application/json' }));
+            a.download = 'ph2crd-log-' + new Date().toISOString().slice(0, 10) + '.json';
+            document.body.appendChild(a); a.click(); a.remove();
+            showNotification(log.length + ' runs saved to your Downloads', 'success');
         }
 
         function clearSession() {
@@ -775,15 +816,12 @@
             let plainText = '';
             if (elementId === 'cleanedNumbers') {
                 const cellularSet = getCellularSet();
-                const map = new Map();
-                contacts.forEach(c => {
-                    if (!map.has(c.name)) map.set(c.name, { n: [], e: [], a: [], isLabel: c.isLabel });
-                    const entry = map.get(c.name);
-                    c.numbers.forEach(num => { if (!entry.n.includes(num)) entry.n.push(num); });
-                    (c.emails || []).forEach(em => { if (!entry.e.includes(em)) entry.e.push(em); });
-                    (c.addresses || []).forEach(ad => { if (!entry.a.includes(ad)) entry.a.push(ad); });
-                });
-                map.forEach(({ n, e, a, isLabel }, name) => {
+                // One entry per contact, in order — exactly what the panel shows
+                // and the guard checked. Grouping by name here merged a person
+                // listed under two labels, and every repeated "1ST DEGREE"
+                // (ChatGPT review #4, 2026-11-15).
+                contacts.map(c => ({ n: c.numbers, e: c.emails || [], a: c.addresses || [], name: c.name }))
+                    .forEach(({ n, e, a, name }) => {
                     const nameColor = 'rgb(51, 204, 255)'; 
                     cleanHtml += `<div><span style="color: ${nameColor}; font-weight: bold; text-transform: uppercase;">${name}</span></div>\n`;
                     plainText += name + '\n';
@@ -936,6 +974,7 @@ CRITICAL INSTRUCTIONS:
             const ics = groupNumbersByNamesFromImage(t);
             if (ics.length) {
                 ics.forEach(nc => {
+                    nc.fromImage = true;   // read from a picture: not part of any pasted text
                     const ex = contacts.find(c => c.name === nc.name);
                     if (ex) { nc.numbers.forEach(n => { if (!ex.numbers.includes(n)) ex.numbers.push(n); }); ex.emails = [...new Set([...(ex.emails || []), ...(nc.emails || [])])]; ex.addresses = [...new Set([...(ex.addresses || []), ...(nc.addresses || [])])]; }
                     else contacts.push(nc);
