@@ -297,6 +297,13 @@
 
             if (/^RR\s+\w+\s+\d+$/i.test(line.trim())) return line.trim();
 
+            // a post-office box is an address too (mirrors the extension, 2026-11-16)
+            const po = line.trim().match(/^(P\.?\s*O\.?\s*BOX\s+[A-Za-z0-9-]+)(.*)$/i);
+            if (po) {
+                const city = po[2].match(/^[,\s]*([A-Za-z][A-Za-z\s]*?)\s*,?\s*([A-Z]{2})\s*(\d{4,5}(?:-\d{4})?)\s*$/);
+                return city ? po[1] + ', ' + city[1].trim() + ', ' + city[2] + ' ' + city[3] : po[1];
+            }
+
             // Every word here has to end where the word in the text ends, or it
             // matches inside a longer one and swallows the city — which then
             // takes the state and zip with it. Two real cases: "FLUSHING" was
@@ -310,7 +317,7 @@
             //
             // The one-or-two character slot is for "1107 66TH ROAD C". It has to
             // step over a unit marker or it takes the FL out of "FL 3".
-            const addressRegex = /\b\d+(?:-\d+)?\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Crescent|Path|Walk|Run|Pass|Bend|Cove|Point|Hill|Heights|Knoll|Glen|Manor|Turnpike|Expressway|Plaza|Concourse|Gardens|Landing|Crossing|Trace|Alley|Estates|Blvd|Pkwy|Hwy|Trl|Rdg|Cres|Tpke|Expy|Plz|Gdns|Lndg|Xing|Trce|Aly|Ests|Park|(?<!\w)Pk|(?<!\w)Cv|(?<!\w)Pt|(?<!\w)Hl|(?<!\w)Hts|(?<!\w)Gln|(?<!\w)Mnr|(?<!\w)Ter|(?<!\w)St|(?<!\w)Ave|(?<!\w)Dr|(?<!\w)Rd|(?<!\w)Ln|(?<!\w)Ct|(?<!\w)Pl|(?<!\w)Sq)(?!\w)\.?(?:\s+(?!(?:UNIT|APT|STE|RM|FL)(?![A-Za-z]))[A-Za-z0-9]{1,2}\b)?(?:\s+(?:(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z])|#)\s*[A-Za-z0-9]+)*(?:\s+(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z0-9]))?/i;
+            const addressRegex = /\b\d+(?:-\d+)?\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Crescent|Path|Walk|Run|Pass|Bend|Cove|Point|Hill|Heights|Knoll|Glen|Manor|Turnpike|Expressway|Plaza|Concourse|Gardens|Landing|Crossing|Trace|Alley|Estates|Blvd|Pkwy|Hwy|Trl|Rdg|Cres|Tpke|Expy|Plz|Gdns|Lndg|Xing|Trce|Aly|Ests|Park|(?<!\w)Pk|(?<!\w)Cir|(?<!\w)Cv|(?<!\w)Pt|(?<!\w)Hl|(?<!\w)Hts|(?<!\w)Gln|(?<!\w)Mnr|(?<!\w)Ter|(?<!\w)St|(?<!\w)Ave|(?<!\w)Dr|(?<!\w)Rd|(?<!\w)Ln|(?<!\w)Ct|(?<!\w)Pl|(?<!\w)Sq)(?!\w)\.?(?:\s+(?!(?:UNIT|APT|STE|RM|FL)(?![A-Za-z]))[A-Za-z0-9]{1,2}\b)?(?:\s+(?:(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z])|#)\s*[A-Za-z0-9]+)*(?:\s+(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z0-9]))?/i;
 
             const match = line.match(addressRegex);
             if (!match) return null;
@@ -485,7 +492,7 @@
                 // comma optional here too, or "BRONX NY 10469" never joins its street \u2014
                 // but never onto a line that already ends in its own city, state and
                 // zip: glued together, both cities were lost (2026-11-13)
-                if (/^[A-Z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/.test(line) && mergedLines.length > 0 &&
+                if (/^(?![Pp]\.?\s*[Oo]\.?\s*[Bb][Oo][Xx]\b)[A-Z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/.test(line) && mergedLines.length > 0 &&
                     !/,\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?\s*$/.test(prev)) {
                     mergedLines[mergedLines.length - 1] = mergedLines[mergedLines.length - 1].trim() + ' ' + line;
                 } else {

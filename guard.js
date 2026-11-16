@@ -61,7 +61,7 @@ function efGuardRest(t) {
         .replace(/[\s,;:.\-–—()]+/g, '');
 }
 
-const EF_CITY_SHAPE_RE = /^[A-Za-z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/;
+const EF_CITY_SHAPE_RE = /^(?![Pp]\.?\s*[Oo]\.?\s*[Bb][Oo][Xx]\b)[A-Za-z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/;
 // The rest of a street cut onto its own line ("APT 2T"); joined to the street.
 const EF_UNIT_LINE_RE = /^\s*(?:apt|unit|suite|ste|room|rm|floor|fl|#)\s*[A-Za-z0-9-]+\s*$/i;
 const efGuardNorm = s => efGuardClean(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
