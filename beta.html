@@ -310,7 +310,7 @@
             //
             // The one-or-two character slot is for "1107 66TH ROAD C". It has to
             // step over a unit marker or it takes the FL out of "FL 3".
-            const addressRegex = /\b\d+(?:-\d+)?\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Crescent|Path|Walk|Run|Pass|Bend|Cove|Point|Hill|Heights|Knoll|Glen|Manor|Turnpike|Expressway|Plaza|Concourse|Gardens|Landing|Crossing|Trace|Alley|Estates|Blvd|Pkwy|Hwy|Trl|Rdg|Cres|Tpke|Expy|Plz|Gdns|Lndg|Xing|Trce|Aly|Ests|Park|(?<!\w)Pk|(?<!\w)Cv|(?<!\w)Pt|(?<!\w)Hl|(?<!\w)Hts|(?<!\w)Gln|(?<!\w)Mnr|(?<!\w)Ter|(?<!\w)St|(?<!\w)Ave|(?<!\w)Dr|(?<!\w)Rd|(?<!\w)Ln|(?<!\w)Ct|(?<!\w)Pl|(?<!\w)Sq)(?!\w)\.?(?:\s+(?!(?:UNIT|APT|STE|RM|FL)(?![A-Za-z]))[A-Za-z0-9]{1,2}\b)?(?:\s+(?:(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z])|#)\s*[A-Za-z0-9]+)*/i;
+            const addressRegex = /\b\d+(?:-\d+)?\s+(?:[A-Za-z0-9]+\s+)*(?:Street|Avenue|Boulevard|Drive|Road|Ridge|Lane|Way|Court|Place|Terrace|Parkway|Highway|Circle|Loop|Trail|Row|Square|Broadway|Crescent|Path|Walk|Run|Pass|Bend|Cove|Point|Hill|Heights|Knoll|Glen|Manor|Turnpike|Expressway|Plaza|Concourse|Gardens|Landing|Crossing|Trace|Alley|Estates|Blvd|Pkwy|Hwy|Trl|Rdg|Cres|Tpke|Expy|Plz|Gdns|Lndg|Xing|Trce|Aly|Ests|Park|(?<!\w)Pk|(?<!\w)Cv|(?<!\w)Pt|(?<!\w)Hl|(?<!\w)Hts|(?<!\w)Gln|(?<!\w)Mnr|(?<!\w)Ter|(?<!\w)St|(?<!\w)Ave|(?<!\w)Dr|(?<!\w)Rd|(?<!\w)Ln|(?<!\w)Ct|(?<!\w)Pl|(?<!\w)Sq)(?!\w)\.?(?:\s+(?!(?:UNIT|APT|STE|RM|FL)(?![A-Za-z]))[A-Za-z0-9]{1,2}\b)?(?:\s+(?:(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z])|#)\s*[A-Za-z0-9]+)*(?:\s+(?:UNIT|APT|SUITE|STE|ROOM|RM|FLOOR|FL)(?![A-Za-z0-9]))?/i;
 
             const match = line.match(addressRegex);
             if (!match) return null;
@@ -781,6 +781,16 @@
                 while (log.length > 300) log.shift();
                 localStorage.setItem(LOG_KEY, JSON.stringify(log));
             } catch (e) { /* storage full or blocked: the run itself still goes on */ }
+            // ...and to his private log, through the relay in his Google account
+            try {
+                fetch('https://script.google.com/macros/s/AKfycbxCmTogMlL1_SpPF1U8CVwp5fBQRn_Gigp0DpLTwb1-8YnhJimwlR33nhz428L3QV6l/exec', {
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ key: 'aWvJzoOXHEa8QJ8x9ga5aGfH', entry: {
+                        id: Date.now() + '-' + Math.random().toString(36).slice(2, 8), at: new Date().toISOString(),
+                        tool, page: location.pathname.split('/').pop(), before, after, ok: guard.ok,
+                        problems: guard.problems.slice(0, 20) } })
+                }).catch(() => {});
+            } catch (e) { /* logging never gets in the way */ }
         }
         function downloadLog() {
             let log = [];

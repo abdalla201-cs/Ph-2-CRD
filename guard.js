@@ -21,8 +21,13 @@ const EF_ROW_VOCAB = new Set((
     'header records record phone motor vehicle service warranty business contact email household ' +
     'listing professional licenses license work affiliations new movers utility voter residence ' +
     'residential land line landline wireless voip voice cellular cell mobile home current previous ' +
-    'null sources source type hone s'
+    'null sources source type hone s fax pager'
 ).split(/\s+/));
+
+// The last word of a row is sometimes cut short ("HIS" for HISTORICAL, "CURR"
+// for CURRENT, seen in his first logged runs, 2026-11-16): a final word of
+// three letters or more that starts a vocabulary word counts as that word.
+const efIsCutVocab = (w) => w.length >= 3 && [...EF_ROW_VOCAB].some(v => v.length > w.length && v.startsWith(w));
 
 // The "EMAIL ADDRESS:" label (also cut short, "MAIL ADDRESS:") is one of the
 // lines the filter is allowed to take out; the emails under it stay.
@@ -47,7 +52,7 @@ function efIsRowVocabOnly(text) {
     if (/[^A-Za-z\s,&#()\-:.]/.test(t)) return false;
     const words = t.toLowerCase().match(/[a-z]+/g) || [];
     if (!words.length) return hasTabs && efExtractPhoneNumbers(efGuardClean(text)).length > 0;
-    return words.every(w => EF_ROW_VOCAB.has(w));
+    return words.every((w, i) => EF_ROW_VOCAB.has(w) || (i === words.length - 1 && hasTabs && efIsCutVocab(w)));
 }
 
 // What is left of a line once its numbers and the filter's own tag are gone.
