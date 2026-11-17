@@ -21,13 +21,17 @@ const EF_ROW_VOCAB = new Set((
     'header records record phone motor vehicle service warranty business contact email household ' +
     'listing professional licenses license work affiliations new movers utility voter residence ' +
     'residential land line landline wireless voip voice cellular cell mobile home current previous ' +
-    'null sources source type hone s fax pager'
+    'null sources source type hone s fax pager other unknown'
 ).split(/\s+/));
 
 // The last word of a row is sometimes cut short ("HIS" for HISTORICAL, "CURR"
-// for CURRENT, seen in his first logged runs, 2026-11-16): a final word of
-// three letters or more that starts a vocabulary word counts as that word.
-const efIsCutVocab = (w) => w.length >= 3 && [...EF_ROW_VOCAB].some(v => v.length > w.length && v.startsWith(w));
+// for CURRENT, even "C", seen in the run logs, 2026-11-16/17): a final word on
+// a tabbed row that starts a longer vocabulary word counts as that word.
+const efIsCutVocab = (w) => w.length >= 1 && [...EF_ROW_VOCAB].some(v => v.length > w.length && v.startsWith(w));
+
+// A number cut to 7–9 digits at the head of a row ("917683760 ⇥ Business
+// Contact Records ⇥ MOBILE") cannot be called; the row is still a source row.
+const EF_CUT_NUMBER_RE = /^\s*\d{7,9}(?=\s*\t)/;
 
 // The "EMAIL ADDRESS:" label (also cut short, "MAIL ADDRESS:") is one of the
 // lines the filter is allowed to take out; the emails under it stay.
@@ -45,7 +49,7 @@ function efGuardClean(t) {
 function efIsRowVocabOnly(text) {
     let t = efGuardClean(text);
     const hasTabs = /\t/.test(t);
-    t = t.replace(/\/\/.*$/, ' ').replace(EF_TEN_DIGIT_RE, ' ').replace(EF_SEVEN_DIGIT_RE, ' ');
+    t = t.replace(/\/\/.*$/, ' ').replace(EF_CUT_NUMBER_RE, ' ').replace(EF_TEN_DIGIT_RE, ' ').replace(EF_SEVEN_DIGIT_RE, ' ');
     // anything but Latin words and column punctuation — a date "10/12", "❌",
     // a note in Arabic — is his writing, so the row is not a source row
     // (ChatGPT review #1, 2026-11-15)
@@ -62,6 +66,9 @@ function efGuardRest(t) {
 }
 
 const EF_CITY_SHAPE_RE = /^(?![Pp]\.?\s*[Oo]\.?\s*[Bb][Oo][Xx]\b)[A-Za-z][A-Za-z\s]+,?\s*[A-Z]{2}\s*\d{4,5}(?:-\d{4})?$/;
+// A street of a type no list knows ("426 TRANSPORT"), written like his data:
+// a house number, then words, all in capitals. Mirrors content.js CUT_STREET_RE.
+const EF_CUT_STREET_RE = /^(?=.*[A-Z])\s*\d+[A-Za-z]?(?:-\d+)?\s+[A-Z0-9][A-Z0-9.'#-]*(?:\s+[A-Z0-9][A-Z0-9.'#-]*){0,6}\s*$/;
 // The rest of a street cut onto its own line ("APT 2T"); joined to the street.
 const EF_UNIT_LINE_RE = /^\s*(?:apt|unit|suite|ste|room|rm|floor|fl|#)\s*[A-Za-z0-9-]+\s*$/i;
 const efGuardNorm = s => efGuardClean(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -122,8 +129,18 @@ function efGuardCheck(before, after, opts) {
 
     // 3. addresses (a street and its city may be joined into one line)
     const afterNorm = efGuardNorm(afterText);
+    // a street of an unknown type with its city on the next line is an address
+    // too — the filter puts the two together (2026-11-17)
+    const cutStreet = new Set();
+    b.forEach((l, i) => {
+        if (l.blank || !EF_CUT_STREET_RE.test(l.text)) return;
+        let j = i + 1;
+        while (j < b.length && b[j].blank) j++;
+        if (b[j] && EF_CITY_SHAPE_RE.test(b[j].text.trim())) cutStreet.add(l);
+    });
     const isPlace = (l) => !opts.isRaw(l.text) && !l.head && efExtractPhoneNumbers(l.text).length === 0 &&
-        (!!efExtractAddressFromLine(l.text) || EF_CITY_SHAPE_RE.test(l.text.trim()) || EF_UNIT_LINE_RE.test(l.text));
+        (!!efExtractAddressFromLine(l.text) || EF_CITY_SHAPE_RE.test(l.text.trim()) || EF_UNIT_LINE_RE.test(l.text) ||
+         cutStreet.has(l));
     b.forEach(l => {
         if (l.blank || !isPlace(l)) return;
         if (!afterNorm.includes(efGuardNorm(l.text))) add('address', l.text);
